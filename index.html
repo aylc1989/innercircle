@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#2C2520">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Inner Circle">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Inner Circle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F8F6F1;
+  --bg-warm: #F3F0E8;
+  --surface: #FFFFFF;
+  --surface-warm: #FDFCF9;
+  --surface-elevated: #FFFFFF;
+  --border: #E8E3DA;
+  --border-light: #F0ECE4;
+  --border-accent: #D4C9B8;
+  --text: #2C2520;
+  --text-secondary: #6B6057;
+  --text-tertiary: #A39A8F;
+  --text-muted: #C4BAB0;
+  --accent: #B8874C;
+  --accent-soft: #F5EDE0;
+  --accent-glow: rgba(184,135,76,0.12);
+  --green: #5E9E7E;
+  --green-soft: #E8F2EC;
+  --red: #C66B5E;
+  --red-soft: #FAEAE7;
+  --blue: #6B8EBF;
+  --blue-soft: #E8EFF7;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --shadow-xs: 0 1px 2px rgba(44,37,32,0.04);
+  --shadow-sm: 0 2px 8px rgba(44,37,32,0.06);
+  --shadow: 0 4px 16px rgba(44,37,32,0.06), 0 1px 4px rgba(44,37,32,0.04);
+  --shadow-lg: 0 8px 32px rgba(44,37,32,0.08), 0 2px 8px rgba(44,37,32,0.04);
+  --shadow-xl: 0 16px 48px rgba(44,37,32,0.1), 0 4px 12px rgba(44,37,32,0.06);
+  --shadow-inner: inset 0 1px 2px rgba(44,37,32,0.04);
+  --font-body: 'Outfit', sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Grain overlay for paper-like texture */
+.app::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+.app {
+  max-width: 520px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--bg);
+}
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* ─── Header ─── */
+.header {
+  padding: 20px 24px 0;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header-title-text {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.header-title-text span {
+  color: var(--accent);
+}
+.logo-mark {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+.header-actions { display: flex; gap: 10px; }
+
+/* ─── Buttons ─── */
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  transition: all 0.25s var(--ease-out);
+  box-shadow: var(--shadow-xs);
+}
+.icon-btn:active {
+  transform: scale(0.93);
+  box-shadow: none;
+  border-color: var(--border-accent);
+  color: var(--text-secondary);
+}
+.icon-btn.primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.icon-btn.primary:active {
+  background: #3D3530;
+}
+.icon-btn.wide {
+  width: auto;
+  padding: 0 18px;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.icon-btn.accent {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(184,135,76,0.25);
+}
+
+/* ─── Search ─── */
+.search-wrap { position: relative; margin-bottom: 18px; }
+.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+.search-input {
+  width: 100%;
+  padding: 12px 14px 12px 42px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: all 0.3s var(--ease-out);
+  box-shadow: var(--shadow-inner);
+}
+.search-input::placeholder { color: var(--text-muted); font-weight: 300; }
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-inner), 0 0 0 3px var(--accent-glow);
+}
+
+/* ─── Contact list ─── */
+.contact-list { padding: 0 16px 24px; }
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 12px;
+  margin-bottom: 2px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.25s var(--ease-out);
+  opacity: 0;
+  transform: translateY(12px);
+  animation: listReveal 0.5s var(--ease-out) forwards;
+}
+.contact-item:active {
+  background: var(--surface-warm);
+  transform: scale(0.98);
+}
+@keyframes listReveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Avatar ─── */
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 16px;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  letter-spacing: 0.03em;
+}
+.avatar::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.2);
+}
+.avatar-lg {
+  width: 84px;
+  height: 84px;
+  font-size: 26px;
+  box-shadow: var(--shadow);
+  animation: avatarFloat 3s ease-in-out infinite;
+}
+@keyframes avatarFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.avatar-lg::after { inset: -4px; border-width: 2px; border-color: var(--accent-soft); }
+
+.contact-info { flex: 1; min-width: 0; }
+.contact-name {
+  font-weight: 500;
+  font-size: 15px;
+  margin-bottom: 3px;
+  letter-spacing: 0.01em;
+}
+.contact-sub {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 300;
+}
+.contact-badge {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.relationship-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 3px 10px;
+  border-radius: 12px;
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ─── Profile ─── */
+.profile-header {
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-light);
+}
+.profile-header-title {
+  font-weight: 500;
+  font-size: 16px;
+  flex: 1;
+  letter-spacing: 0.01em;
+}
+.profile-hero {
+  padding: 36px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: heroReveal 0.6s var(--ease-out);
+}
+@keyframes heroReveal {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.profile-name {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 500;
+  margin-top: 18px;
+  letter-spacing: -0.01em;
+}
+.profile-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 5px;
+  font-weight: 300;
+}
+.profile-relationship { margin-top: 8px; }
+
+/* ─── Summary card ─── */
+.summary-card {
+  margin: 0 24px 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-warm) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  animation: cardReveal 0.5s var(--ease-out) 0.15s both;
+}
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  opacity: 0.5;
+}
+@keyframes cardReveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.summary-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.summary-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  font-style: italic;
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+.summary-refresh {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color 0.2s;
+}
+.summary-refresh:active { color: var(--accent); }
+.pulse { animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:0.35} 50%{opacity:1} }
+
+/* ─── Fields ─── */
+.section-title {
+  padding: 0 24px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  margin-top: 8px;
+}
+.fields-card {
+  margin: 0 24px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  animation: cardReveal 0.5s var(--ease-out) 0.2s both;
+}
+.field-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 14px;
+  transition: background 0.2s;
+}
+.field-row:last-child { border-bottom: none; }
+.field-icon {
+  width: 22px;
+  text-align: center;
+  color: var(--accent);
+  font-size: 14px;
+  flex-shrink: 0;
+  padding-top: 2px;
+  opacity: 0.7;
+}
+.field-content { flex: 1; min-width: 0; }
+.field-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 3px;
+}
+.field-value {
+  color: var(--text);
+  line-height: 1.6;
+  word-break: break-word;
+  font-weight: 400;
+}
+
+/* ─── NLP Bar ─── */
+.nlp-bar {
+  flex-shrink: 0;
+  padding: 12px 24px;
+  padding-bottom: calc(12px + var(--safe-bottom));
+  background: linear-gradient(to top, var(--bg) 60%, transparent);
+  border-top: 1px solid var(--border-light);
+}
+.nlp-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 6px 6px 6px 16px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.3s var(--ease-out), border-color 0.3s;
+}
+.nlp-inner:focus-within {
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-accent);
+}
+.nlp-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  background: transparent;
+  color: var(--text);
+  min-width: 0;
+}
+.nlp-input::placeholder { color: var(--text-muted); font-weight: 300; }
+.nlp-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s var(--ease-out);
+}
+.nlp-btn:active { transform: scale(0.9); }
+.nlp-send {
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: var(--shadow-sm);
+}
+.nlp-send:disabled { opacity: 0.2; cursor: default; }
+.nlp-mic {
+  background: var(--surface-warm);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border);
+}
+.nlp-mic.recording {
+  background: var(--red);
+  color: white;
+  border-color: var(--red);
+  animation: pulse 1s ease-in-out infinite;
+  box-shadow: 0 0 0 4px var(--red-soft);
+}
+.nlp-mode-tag {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  white-space: nowrap;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ─── Tabs ─── */
+.tab-bar {
+  display: flex;
+  margin: 0 24px 16px;
+  gap: 4px;
+  background: var(--bg-warm);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+}
+.tab {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: var(--font-body);
+  border-radius: 8px;
+  transition: all 0.25s var(--ease-out);
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+.tab.active {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── Log ─── */
+.log-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+}
+.log-item:last-child { border-bottom: none; }
+.log-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.log-dot.recent { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+.log-text { color: var(--text-secondary); line-height: 1.6; font-weight: 400; }
+.log-time { font-size: 10px; color: var(--text-muted); margin-top: 3px; font-weight: 400; letter-spacing: 0.02em; }
+
+/* ─── Edit ─── */
+.edit-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: all 0.25s var(--ease-out);
+  box-shadow: var(--shadow-inner);
+}
+.edit-input:focus { border-color: var(--accent); box-shadow: var(--shadow-inner), 0 0 0 3px var(--accent-glow); }
+.edit-textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+.edit-field { padding: 14px 18px; border-bottom: 1px solid var(--border-light); }
+.edit-field:last-child { border-bottom: none; }
+.edit-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+
+/* ─── Modal ─── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(44,37,32,0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 500;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: overlayIn 0.3s var(--ease-out);
+}
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 24px;
+  padding-bottom: calc(24px + var(--safe-bottom));
+  animation: modalSlide 0.4s var(--ease-spring);
+  box-shadow: var(--shadow-xl);
+}
+@keyframes modalSlide { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.modal-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Dropdown ─── */
+.dropdown-menu {
+  position: absolute; right: 0; top: 48px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 300;
+  min-width: 200px;
+  overflow: hidden;
+  animation: dropIn 0.2s var(--ease-spring);
+}
+@keyframes dropIn { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.dropdown-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; font-size: 14px; font-weight: 400;
+  cursor: pointer; color: var(--text-secondary);
+  border: none; background: none; width: 100%;
+  font-family: var(--font-body); text-align: left;
+  transition: all 0.2s;
+}
+.dropdown-item:active { background: var(--bg-warm); color: var(--text); }
+.dropdown-divider { height: 1px; background: var(--border-light); margin: 0 18px; }
+
+/* ─── Toast ─── */
+.toast {
+  position: fixed;
+  bottom: calc(84px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 12px 24px;
+  border-radius: 28px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  z-index: 999;
+  animation: toastIn 0.4s var(--ease-spring);
+  box-shadow: var(--shadow-lg);
+  white-space: nowrap;
+  max-width: 90%;
+  letter-spacing: 0.02em;
+}
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 16px) scale(0.9); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+
+/* ─── Empty state ─── */
+.empty-state { text-align: center; padding: 56px 40px; }
+.empty-icon {
+  width: 64px; height: 64px; margin: 0 auto 18px;
+  border-radius: 50%;
+  background: var(--bg-warm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+}
+.empty-title { font-family: var(--font-display); font-size: 18px; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px; }
+.empty-sub { font-size: 13px; line-height: 1.6; color: var(--text-muted); font-weight: 300; }
+
+/* ─── Settings ─── */
+.settings-section { padding: 0 24px; margin-bottom: 24px; }
+.settings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+.settings-row { padding: 18px; border-bottom: 1px solid var(--border-light); }
+.settings-row:last-child { border-bottom: none; }
+.settings-label { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+.settings-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5; font-weight: 300; }
+.api-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 500; padding: 5px 12px; border-radius: 12px;
+  letter-spacing: 0.02em;
+}
+.api-status.active { background: var(--green-soft); color: var(--green); }
+.api-status.inactive { background: var(--bg-warm); color: var(--text-muted); }
+
+.gen-summary-btn {
+  width: calc(100% - 48px); margin: 0 24px 20px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px dashed var(--border-accent);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.25s var(--ease-out);
+}
+.gen-summary-btn:active { background: var(--accent-soft); border-style: solid; }
+
+/* ─── Provider radio ─── */
+.provider-option {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.provider-option:last-child { border-bottom: none; }
+.provider-option:active { background: var(--bg-warm); }
+.provider-radio {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--border-accent);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.25s var(--ease-out);
+}
+.provider-radio.selected { border-color: var(--accent); }
+.provider-radio.selected::after {
+  content: ''; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent);
+  animation: radioIn 0.3s var(--ease-spring);
+}
+@keyframes radioIn { from { transform: scale(0); } to { transform: scale(1); } }
+.provider-info { flex: 1; }
+.provider-name { font-size: 14px; font-weight: 500; }
+.provider-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-weight: 300; }
+
+/* ─── Utility ─── */
+svg { display: block; }
+.view-enter { animation: viewEnter 0.35s var(--ease-out); }
+@keyframes viewEnter { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+
+/* ─── Golden divider accent ─── */
+.gold-line {
+  height: 1px;
+  margin: 0 24px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.15;
+}
+
+/* ─── Connection cards ─── */
+.connections-grid { padding: 0 24px 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+.conn-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.25s var(--ease-out);
+  box-shadow: var(--shadow-xs);
+  flex: 1 1 calc(50% - 5px);
+  min-width: 0;
+}
+.conn-card:active { transform: scale(0.97); background: var(--surface-warm); }
+.conn-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 500; font-size: 11px;
+  color: white; flex-shrink: 0;
+}
+.conn-info { flex: 1; min-width: 0; overflow: hidden; }
+.conn-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conn-rel { font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+const PROFILES_KEY='ic_profiles',LOGS_KEY='ic_logs',SETTINGS_KEY='ic_settings';
+const AVATAR_COLORS=['#5E6B5E','#7D6B5E','#5E6B7D','#6B5E7D','#7D5E6B','#4E6B6B','#6B6B4E','#8B7355','#6B8B8B','#8B6B7B'];
+const FIELD_DEFS=[
+  {key:'relationship',label:'Relationship to me',icon:'\u25C7',type:'text',placeholder:'e.g. Wife, Brother, Best friend, Colleague'},
+  {key:'partner',label:'Their partner/spouse',icon:'\u2665',type:'text',placeholder:"Their partner's name (not you)"},
+  {key:'job',label:'Occupation',icon:'\u25C8',type:'text'},
+  {key:'company',label:'Company',icon:'\u25A3',type:'text'},
+  {key:'birthday',label:'Birthday',icon:'\u2726',type:'date'},
+  {key:'address',label:'Location',icon:'\u25CE',type:'text'},
+  {key:'email',label:'Email',icon:'\u2709',type:'email'},
+  {key:'phone',label:'Phone',icon:'\u260E',type:'tel'},
+  {key:'children',label:'Children',icon:'\u25CC',type:'text',placeholder:'e.g. Emma (8), Liam (5)'},
+  {key:'pets',label:'Pets',icon:'\u25E6',type:'text',placeholder:'e.g. Max (golden retriever)'},
+  {key:'interests',label:'Interests',icon:'\u2605',type:'text',placeholder:'e.g. hiking, photography'},
+  {key:'notes',label:'Notes',icon:'\u00B6',type:'textarea'},
+];
+const PROVIDERS={
+  local:{name:'Local (Free)',desc:'Pattern matching \u2014 no API needed',needsKey:false},
+  anthropic:{name:'Anthropic (Claude)',desc:'Best quality \u2014 Sonnet default',needsKey:true,ph:'sk-ant-...'},
+  gemini:{name:'Google Gemini',desc:'Free tier \u2014 1000 requests/day free',needsKey:true,ph:'AIza...'},
+  openai:{name:'OpenAI (ChatGPT)',desc:'GPT-4o-mini or GPT-4o',needsKey:true,ph:'sk-...'},
+  perplexity:{name:'Perplexity',desc:'Sonar models \u2014 fast',needsKey:true,ph:'pplx-...'},
+};
+const I={
+  plus:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  search:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  back:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+  edit:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  mic:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
+  send:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
+  download:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+  upload:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
+  cloud:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>',
+  trash:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  sparkle:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/></svg>',
+  check:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  x:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  menu:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>',
+  settings:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const $=(s,p)=>(p||document).querySelector(s);
+const h=(tag,attrs,...kids)=>{const el=document.createElement(tag);if(attrs)Object.entries(attrs).forEach(([k,v])=>{if(k==='class')el.className=v;else if(k==='html')el.innerHTML=v;else if(k.startsWith('on'))el.addEventListener(k.slice(2).toLowerCase(),v);else if(k==='style'&&typeof v==='object')Object.assign(el.style,v);else el.setAttribute(k,v)});kids.flat().forEach(c=>{if(c!=null)el.append(typeof c==='string'?c:c)});return el};
+const fmtDate=d=>{if(!d)return'';try{return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}catch{return d}};
+const timeAgo=d=>{const s=Math.floor((Date.now()-new Date(d))/1e3);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';if(s<2592e3)return Math.floor(s/86400)+'d ago';return fmtDate(d)};
+const initials=n=>n?n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2):'?';
+const getColor=n=>{let v=0;for(let i=0;i<(n||'').length;i++)v=n.charCodeAt(i)+((v<<5)-v);return AVATAR_COLORS[Math.abs(v)%AVATAR_COLORS.length]};
+const getSubtitle=p=>{if(p.job&&p.company)return p.job+' at '+p.company;return p.job||p.company||p.address||''};
+
+let S={profiles:[],logs:[],view:'list',activeId:null,search:'',profileTab:'details',settings:{provider:'local',apiKey:'',model:''}};
+function load(){try{S.profiles=JSON.parse(localStorage.getItem(PROFILES_KEY)||'[]')}catch{S.profiles=[]}try{S.logs=JSON.parse(localStorage.getItem(LOGS_KEY)||'[]')}catch{S.logs=[]}try{Object.assign(S.settings,JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'))}catch{}}
+function saveP(){localStorage.setItem(PROFILES_KEY,JSON.stringify(S.profiles))}
+function saveL(){localStorage.setItem(LOGS_KEY,JSON.stringify(S.logs))}
+function saveS(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(S.settings))}
+function addLog(pid,text){S.logs.unshift({id:uid(),profileId:pid,text,timestamp:new Date().toISOString()});saveL()}
+function getActive(){return S.profiles.find(p=>p.id===S.activeId)}
+
+// === RELATIONSHIP LINKING ===
+var REVERSE_REL={
+  'father':'Child','mother':'Child','dad':'Child','mom':'Child','parent':'Child',
+  'son':'Parent','daughter':'Parent','child':'Parent',
+  'brother':'Sibling','sister':'Sibling','sibling':'Sibling',
+  'husband':'Spouse','wife':'Spouse','spouse':'Spouse',
+  'friend':'Friend','best friend':'Friend',
+  'boss':'Report','manager':'Report',
+  'colleague':'Colleague','coworker':'Colleague',
+  'uncle':'Niece/Nephew','aunt':'Niece/Nephew',
+  'cousin':'Cousin',
+  'grandfather':'Grandchild','grandmother':'Grandchild','grandpa':'Grandchild','grandma':'Grandchild',
+  'grandson':'Grandparent','granddaughter':'Grandparent',
+  'nephew':'Uncle/Aunt','niece':'Uncle/Aunt',
+  'mother-in-law':'Child-in-law','father-in-law':'Child-in-law',
+  'sister-in-law':'Sibling-in-law','brother-in-law':'Sibling-in-law',
+  'partner':'Partner','girlfriend':'Partner','boyfriend':'Partner'
+};
+
+function findProfileByName(name){
+  var nl=name.toLowerCase().trim();
+  return S.profiles.find(function(p){return p.name.toLowerCase()===nl});
+}
+function findOrCreateProfile(name){
+  var existing=findProfileByName(name);
+  if(existing)return existing;
+  var p={id:uid(),name:name.trim(),createdAt:new Date().toISOString(),summary:'',links:[]};
+  S.profiles.push(p);saveP();addLog(p.id,'Profile auto-created via connection');
+  return p;
+}
+function addLink(fromId,toId,toName,label){
+  var from=S.profiles.find(function(p){return p.id===fromId});
+  if(!from)return;
+  if(!from.links)from.links=[];
+  // Don't duplicate
+  var exists=from.links.find(function(l){return l.targetId===toId});
+  if(exists){exists.label=label;exists.targetName=toName;}
+  else from.links.push({targetId:toId,targetName:toName,label:label});
+  saveP();
+}
+function createBidirectionalLink(sourceId,targetName,relLabel){
+  var target=findOrCreateProfile(targetName);
+  var source=S.profiles.find(function(p){return p.id===sourceId});
+  if(!source||!target)return null;
+  addLink(sourceId,target.id,target.name,relLabel);
+  var rev=REVERSE_REL[relLabel.toLowerCase()]||'Connected';
+  addLink(target.id,sourceId,source.name,rev);
+  return target;
+}
+function getProfileLinks(profileId){
+  var p=S.profiles.find(function(x){return x.id===profileId});
+  if(!p||!p.links)return[];
+  return p.links.filter(function(l){
+    return S.profiles.some(function(pr){return pr.id===l.targetId});
+  });
+}
+
+// === LOCAL NLP (comprehensive) ===
+var JOBS='engineer|designer|developer|manager|director|analyst|teacher|doctor|nurse|lawyer|accountant|consultant|therapist|chef|writer|scientist|professor|architect|artist|musician|photographer|editor|producer|officer|specialist|coordinator|student|intern|programmer|plumber|electrician|mechanic|pilot|dentist|pharmacist|surgeon|psychologist|veterinarian|librarian|journalist|realtor|agent|broker|trainer|coach|tutor|carpenter|painter|cashier|receptionist|driver|waiter|waitress|bartender|baker|welder|firefighter|paramedic|technician|clerk|secretary|assistant|associate|executive|president|ceo|cfo|cto|vp|founder|entrepreneur|freelancer|contractor|researcher|lecturer|instructor|counselor|advisor|strategist|recruiter|salesperson|marketer|auditor|actuary|paralegal|attorney|solicitor';
+var RELS='wife|husband|partner|girlfriend|boyfriend|fianc[eé]+|sister|brother|mom|mother|dad|father|daughter|son|aunt|uncle|cousin|grandma|grandmother|grandpa|grandfather|niece|nephew|friend|best friend|colleague|coworker|co-worker|boss|manager|neighbor|neighbour|roommate|mentor|mentee|ex|step-?mother|step-?father|step-?sister|step-?brother|in-law|mother-in-law|father-in-law|sister-in-law|brother-in-law';
+var LINK_RELS='father|mother|dad|mom|brother|sister|son|daughter|husband|wife|spouse|partner|uncle|aunt|cousin|grandfather|grandmother|grandpa|grandma|boss|friend|best friend|colleague|nephew|niece';
+function clean(s){return s.trim().replace(/[.!,;]+$/,'')}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+function tryDate(s){s=clean(s);var d=new Date(s);if(!isNaN(d)&&d.getFullYear()>1900&&d.getFullYear()<2030)return d.toISOString().split('T')[0];var s2=s.replace(/(\d+)(?:st|nd|rd|th)/gi,'$1');d=new Date(s2);if(!isNaN(d)&&d.getFullYear()>1900)return d.toISOString().split('T')[0];return null}
+
+function localParse(text,name){
+  var t=text.trim(),tl=t.toLowerCase(),up={},m=[],linkedProfiles=[];
+  // Split compound sentences for multi-fact input
+  var parts=[t];
+  if(t.includes(' and ')&&t.length>40&&!tl.match(/(?:father|mother|dad|mom|brother|sister)\s+is/i)){
+    parts=t.split(/\s+and\s+/i).map(function(p){return p.trim()}).filter(Boolean);
+  }
+  for(var pi=0;pi<parts.length;pi++){
+    var pt=parts[pi],ptl=pt.toLowerCase();
+    // Cross-profile links: "her father is Gary Foster"
+    var cx1=pt.match(new RegExp("(?:her|his|their)\\s+("+LINK_RELS+")\\s+is\\s+(.+?)(?:\\s+and\\s+|$)","i"));
+    if(cx1){linkedProfiles.push({name:clean(cx1[2]),label:cap(cx1[1])});m.push(cap(cx1[1])+': '+clean(cx1[2]));continue}
+    var cx2=pt.match(new RegExp("(.+?)(?:'s|s')\\s+("+LINK_RELS+")\\s+is\\s+(.+?)(?:\\s+and\\s+|$)","i"));
+    if(!cx1&&cx2){linkedProfiles.push({name:clean(cx2[3]),label:cap(cx2[2])});m.push(cap(cx2[2])+': '+clean(cx2[3]));continue}
+    // Relationship to user
+    var rm=ptl.match(new RegExp("(?:she|he|they|this)?\\s*(?:is|are|'s)\\s+my\\s+("+RELS+")","i"))||ptl.match(new RegExp("^(?:my|that'?s my|this is my)\\s+("+RELS+")","i"))||ptl.match(/we(?:'re|\s+are)\s+(married|engaged|dating|friends|coworkers|colleagues|roommates|neighbors)/i);
+    if(rm&&!up.relationship){var rv=clean(rm[1]);if(rv==='married')rv='Spouse';else if(rv==='engaged')rv='Fiancé(e)';else if(rv==='dating')rv='Partner';else if(rv==='friends')rv='Friend';up.relationship=cap(rv);m.push('Relationship: '+up.relationship);continue}
+    // Their partner/spouse
+    var pm=pt.match(/(?:(?:she|he|they)\s+)?(?:is\s+)?(?:married|engaged)\s+to\s+(\w[\w\s]*)/i)||pt.match(/(?:their|his|her)\s+(?:partner|spouse|husband|wife|fianc[eé]+)\s+(?:is\s+)?(\w[\w\s]*)/i);
+    if(pm&&!up.partner){up.partner=clean(pm[1]||pm[2]);m.push('Partner: '+up.partner);continue}
+    // Job+Company compound: "works at Google as a designer" / "she's a designer at Google"
+    var jc=pt.match(/(?:works?|working)\s+(?:at|for)\s+(.+?)\s+as\s+(?:a|an)\s+(.+)/i);
+    if(jc){if(!up.company){up.company=clean(jc[1]);m.push('Company: '+up.company)}if(!up.job){up.job=clean(jc[2]);m.push('Job: '+up.job)}continue}
+    var jc2=pt.match(/(?:is|are|'s)\s+(?:a|an)\s+(.+?)\s+(?:at|for)\s+(.+)/i);
+    if(jc2){if(!up.job){up.job=clean(jc2[1]);m.push('Job: '+up.job)}if(!up.company){up.company=clean(jc2[2]);m.push('Company: '+up.company)}continue}
+    // Job only
+    var jm=pt.match(/(?:works?|working)\s+as\s+(?:a|an)\s+(.+)/i)||pt.match(new RegExp("(?:is|are|'s)\\s+(?:a|an)\\s+([\\w\\s]*?(?:"+JOBS+"))","i"))||pt.match(/(?:started|got)\s+(?:a\s+)?(?:new\s+)?(?:job|role|position)\s+as\s+(?:a\s+|an\s+)?(.+?)(?:\s+at\s+|\s+for\s+|$)/i)||pt.match(/(?:does|do)\s+([\w\s]+?(?:work|consulting|marketing|sales|design|engineering|finance|accounting|law|medicine|teaching|research|writing))/i)||pt.match(/(?:works?|working)\s+in\s+([\w\s]+?)$/i)||pt.match(/(?:got\s+)?promoted\s+to\s+(?:a\s+|an\s+)?(.+)/i);
+    if(jm&&!up.job){up.job=clean(jm[1]);m.push('Job: '+up.job)}
+    // Company only
+    var cm=pt.match(/(?:works?|working|started|joined|hired|employed)\s+(?:at|for|by)\s+(.+?)(?:\s+as\s+|$)/i)||pt.match(/(?:just\s+)?(?:joined|started\s+at)\s+(.+)/i)||pt.match(/(?:got\s+(?:a\s+)?(?:new\s+)?(?:job|role|offer))\s+(?:at|from|with)\s+(.+?)(?:\s+as\s+|$)/i);
+    if(cm&&!up.company&&!up.job){var cv=clean(cm[1]||cm[2]);if(cv.length<50){up.company=cv;m.push('Company: '+cv)}}
+    // Birthday
+    var bm=pt.match(/(?:birthday|born|birth\s*date|dob|bday)\s+(?:is\s+)?(?:on\s+)?(.+)/i)||pt.match(/born\s+(?:on\s+)?(.+)/i);
+    if(bm&&!up.birthday){var parsed=tryDate(bm[1]);if(parsed){up.birthday=parsed;m.push('Birthday: '+fmtDate(parsed))}}
+    // Turns N on date
+    var turnm=pt.match(/(?:turns?|turning)\s+(\d+)\s+(?:on|in)\s+(.+)/i);
+    if(turnm&&!up.birthday){var tp=tryDate(turnm[2]);if(tp){up.birthday=tp;m.push('Birthday: '+fmtDate(tp))}}
+    // Age: "she's 34" / "he is 28 years old"
+    var agm=pt.match(/(?:is|'s|are|turned)\s+(\d{1,3})\s*(?:years?\s*old)?$/i)||pt.match(/^(\d{1,3})\s*(?:years?\s*old)$/i)||pt.match(/age\s*(?:is\s*)?(\d{1,3})/i);
+    if(agm&&!up.birthday&&!up.job){var age=parseInt(agm[1]);if(age>0&&age<120){var by=new Date().getFullYear()-age;up.birthday=by+'-01-01';m.push('Age ~'+age+' (born ~'+by+')')}}
+    // Location
+    var lm=pt.match(/(?:lives?|living|moved|relocated|moving|based|resides?)\s+(?:in|to|at|near)\s+(.+)/i)||pt.match(/(?:from|hometown\s+is)\s+(.+)/i)||pt.match(/(?:just\s+)?moved\s+to\s+(.+)/i);
+    if(lm&&!up.address&&!up.company){up.address=clean(lm[1]);m.push('Location: '+up.address)}
+    // Email
+    var em=pt.match(/([\w.+-]+@[\w-]+\.[\w.]+)/);if(em&&!up.email){up.email=em[1];m.push('Email: '+em[1])}
+    // Phone
+    var phm=pt.match(/(?:phone|number|cell|mobile|tel|#)\s*(?:is\s*)?[:\s]*([+\d\s()\-]{7,})/i);
+    if(!phm)phm=pt.match(/^([+]?[\d\s()\-]{10,})$/);
+    if(phm&&!up.phone){up.phone=clean(phm[1]);m.push('Phone: '+up.phone)}
+    // Children
+    var chm=pt.match(/(?:has|have|got)\s+(\d+)\s+(?:kids?|children|sons?|daughters?)/i);
+    if(chm){up.children=chm[1]+' children';m.push('Children: '+up.children)}
+    if(!chm){var chm2=pt.match(/(?:has|have)\s+(?:a\s+)?(?:kid|child|son|daughter|baby|newborn)s?\s+(?:named?\s+)?(.+)/i)||pt.match(/(?:son|daughter|child|baby)\s+(?:is\s+)?(?:named?\s+)?(\w[\w\s]*)/i)||pt.match(/(?:just\s+)?(?:had|expecting|pregnant\s+with)\s+(?:a\s+)?(?:baby|son|daughter|child|boy|girl)\s*(?:named?\s+)?(.+)?/i);if(chm2){var cv2=chm2[1]?clean(chm2[1]):'New baby';up.children=cv2;m.push('Children: '+cv2)}}
+    // Pets
+    var animals='dog|cat|bird|fish|hamster|rabbit|guinea pig|parrot|turtle|snake|lizard|ferret|puppy|kitten|goldfish|bunny|poodle|labrador|retriever|bulldog|chihuahua|corgi|husky|beagle';
+    var ptm=pt.match(new RegExp("(?:has|have|got|adopted|rescued)\\s+(?:a\\s+)?(?:pet\\s+)?("+animals+")\\s+(?:named?\\s+)?(.+)","i"));
+    if(ptm){up.pets=clean(ptm[2])+' ('+ptm[1]+')';m.push('Pets: '+up.pets)}
+    if(!ptm){var ptm2=pt.match(new RegExp("(?:pet|dog|cat|"+animals+")(?:'s)?\\s+(?:name\\s+)?(?:is\\s+)?(?:named?\\s+)?([A-Z]\\w+)","i"));if(ptm2&&!up.pets){up.pets=clean(ptm2[1]);m.push('Pets: '+up.pets)}}
+    // Interests
+    var inm=pt.match(/(?:likes?|loves?|enjoys?|passionate\s+about|really\s+into|(?:is\s+)?into|interested\s+in|hobbies?\s+(?:are|is|include)?)\s+(.+)/i)||pt.match(/(?:hobby|hobbies|passion)\s+(?:is|are|include)?\s*(.+)/i)||pt.match(/(?:big|huge)\s+(?:fan\s+of)\s+(.+)/i);
+    if(inm&&Object.keys(up).length===0){up.interests=clean(inm[1]);m.push('Interests: '+up.interests)}
+    // Life events
+    var events=[[/(?:just\s+)?(?:got\s+)?(?:married|wed|eloped)/i,'Just got married'],[/(?:just\s+)?(?:got\s+)?(?:engaged|proposed)/i,'Just got engaged'],[/(?:just\s+)?(?:got\s+)?(?:divorced|separated)/i,'Got divorced/separated'],[/(?:just\s+)?(?:got\s+)?(?:promoted|promotion)/i,'Got promoted'],[/(?:just\s+)?(?:graduated|finished school|got (?:a |their )?degree)/i,'Graduated'],[/(?:just\s+)?(?:retired|retiring)/i,'Retired'],[/(?:got\s+)?(?:laid off|fired|let go|lost (?:their|his|her) job)/i,'Lost their job'],[/(?:just\s+)?(?:bought|purchased)\s+(?:a\s+)?(?:house|home|condo|apartment)/i,'Bought a home'],[/(?:started|starting)\s+(?:a\s+)?(?:business|company|startup)/i,'Started a business'],[/(?:having|had)\s+(?:a\s+)?(?:baby|another\s+child)/i,'Having a baby']];
+    for(var ei=0;ei<events.length;ei++){if(ptl.match(events[ei][0])&&m.length===0){if(!up.notes)up.notes=events[ei][1];m.push(events[ei][1]);break}}
+    // Met context
+    var metm=pt.match(/(?:met|know)\s+(?:them\s+)?(?:at|from|through|in|via)\s+(.+)/i);
+    if(metm&&Object.keys(up).length===0){up.notes=clean(pt);m.push('Added to notes')}
+  }
+  // Bare email/phone fallback
+  if(Object.keys(up).length===0&&linkedProfiles.length===0){
+    var be=t.match(/^([\w.+-]+@[\w-]+\.[\w.]+)$/);if(be){up.email=be[1];m.push('Email: '+be[1])}
+    var bp=t.match(/^([+]?[\d\s()\-]{7,})$/);if(bp){up.phone=clean(bp[1]);m.push('Phone: '+up.phone)}
+  }
+  // Final fallback
+  if(Object.keys(up).length===0&&linkedProfiles.length===0){up.notes=t;m.push('Added to notes')}
+  return{updates:up,summary:m.join(', '),linkedProfiles:linkedProfiles};
+}
+
+// === LOCAL SUMMARY GENERATOR (no API needed) ===
+function generateLocalSummary(profileId){
+  var p=S.profiles.find(function(x){return x.id===profileId});if(!p)return;
+  var parts=[];
+  if(p.relationship)parts.push(p.name+' is your '+p.relationship.toLowerCase()+'.');
+  if(p.job&&p.company)parts.push((p.relationship?'They work':'Works')+' as a '+p.job+' at '+p.company+'.');
+  else if(p.job)parts.push((p.relationship?'They work':'Works')+' as a '+p.job+'.');
+  else if(p.company)parts.push((p.relationship?'They work':'Works')+' at '+p.company+'.');
+  if(p.address)parts.push('Based in '+p.address+'.');
+  if(p.partner)parts.push('Partner: '+p.partner+'.');
+  if(p.children)parts.push('Children: '+p.children+'.');
+  if(p.pets)parts.push('Pets: '+p.pets+'.');
+  if(p.birthday){var age=Math.floor((Date.now()-new Date(p.birthday+'T00:00:00'))/(365.25*24*60*60*1e3));if(age>0&&age<120)parts.push('Age '+age+'.');else parts.push('Birthday: '+fmtDate(p.birthday)+'.')}
+  if(p.interests)parts.push('Enjoys '+p.interests+'.');
+  var links=getProfileLinks(p.id);
+  if(links.length>0)parts.push('Connected to '+links.map(function(l){return l.targetName+' ('+l.label+')'}).join(', ')+'.');
+  var recent=S.logs.filter(function(l){return l.profileId===profileId&&!l.text.startsWith('Profile created')&&!l.text.startsWith('Summary')&&!l.text.startsWith('Linked')}).slice(0,2);
+  if(recent.length>0)parts.push('Recent: '+recent[0].text+'.');
+  if(parts.length>0){p.summary=parts.join(' ');saveP();addLog(p.id,'Summary updated');showToast('Summary generated');render()}
+  else showToast('Add some details first');
+}
+
+
+// === LLM API ===
+function getSysPrompt(name,cur){
+  return"You are a personal CRM assistant. The USER is describing someone named \""+name+"\".\n\nCRITICAL: The user speaks from THEIR OWN perspective.\n- \"she is my wife\" means RELATIONSHIP = \"Wife\"\n- \"he is my brother\" means RELATIONSHIP = \"Brother\"\n- \"her husband is Tom\" means PARTNER = \"Tom\"\n- \"her father is Gary Foster\" means create a LINK to Gary Foster as Father\n- \"his mom is Julie and dad is Gary\" means create LINKS to Julie (Mother) and Gary (Father)\n\nCurrent data: "+JSON.stringify(cur)+"\n\nReturn ONLY valid JSON: {\"updates\":{\"key\":\"value\"},\"summary\":\"what changed\",\"links\":[{\"name\":\"Full Name\",\"label\":\"Father\"}]}\nKeys: "+FIELD_DEFS.map(function(f){return f.key}).join(', ')+"\n- relationship = how this contact relates to the user\n- partner = this contact's own partner/spouse name\n- links = array of connections to OTHER people (their family, friends etc). Each has a name and relationship label.\n- children: \"Emma (8), Liam (5)\"\n- pets: \"Max (golden retriever)\"\n- birthday: YYYY-MM-DD\n- Append to existing values when appropriate\n- Unmapped info goes in notes\n- links array can be empty [] if no cross-person connections mentioned";
+}
+async function callLLM(text,name,cur){
+  var p=S.settings.provider,k=S.settings.apiKey,mdl=S.settings.model;var sys=getSysPrompt(name,cur);
+  if(p==='anthropic'){var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:mdl||'claude-sonnet-4-20250514',max_tokens:1000,system:sys,messages:[{role:'user',content:text}]})});var d=await r.json();if(d.error)throw new Error(d.error.message);return d.content?.map(function(c){return c.text||''}).join('')||''}
+  if(p==='gemini'){var gm=mdl||'gemini-2.5-flash';var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+gm+':generateContent?key='+k,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system_instruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:text}]}]})});var d=await r.json();if(d.error)throw new Error(d.error.message||'Gemini error');return d.candidates?.[0]?.content?.parts?.[0]?.text||''}
+  var url=p==='openai'?'https://api.openai.com/v1/chat/completions':'https://api.perplexity.ai/chat/completions';
+  var m2=p==='openai'?(mdl||'gpt-4o-mini'):(mdl||'sonar');
+  var r2=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+k},body:JSON.stringify({model:m2,max_tokens:1000,messages:[{role:'system',content:sys},{role:'user',content:text}]})});
+  var d2=await r2.json();if(d2.error)throw new Error(d2.error.message||'API error');return d2.choices?.[0]?.message?.content||'';
+}
+async function callSummary(name,fields,logs){
+  var p=S.settings.provider,k=S.settings.apiKey,mdl=S.settings.model;
+  var prompt='Write a brief, warm 2-3 sentence summary about '+name+'. Profile: '+JSON.stringify(fields)+'. Recent: '+(logs.join('; ')||'None')+'. Return ONLY the text.';
+  if(p==='anthropic'){var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:mdl||'claude-sonnet-4-20250514',max_tokens:500,messages:[{role:'user',content:prompt}]})});var d=await r.json();if(d.error)throw new Error(d.error.message);return d.content?.map(function(c){return c.text||''}).join('').trim()||''}
+  if(p==='gemini'){var gm=mdl||'gemini-2.5-flash';var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+gm+':generateContent?key='+k,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}]})});var d=await r.json();if(d.error)throw new Error(d.error.message||'Gemini error');return d.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||''}
+  var url=p==='openai'?'https://api.openai.com/v1/chat/completions':'https://api.perplexity.ai/chat/completions';
+  var m2=p==='openai'?(mdl||'gpt-4o-mini'):(mdl||'sonar');
+  var r2=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+k},body:JSON.stringify({model:m2,max_tokens:500,messages:[{role:'user',content:prompt}]})});
+  var d2=await r2.json();return d2.choices?.[0]?.message?.content?.trim()||'';
+}
+async function processNLP(text,inputEl){
+  var p=getActive();if(!p||!text.trim())return;if(inputEl)inputEl.value='';
+  var cur={};FIELD_DEFS.forEach(function(f){if(p[f.key])cur[f.key]=p[f.key]});
+  if(S.settings.provider==='local'){var r=localParse(text,p.name);
+    // Handle cross-profile links
+    if(r.linkedProfiles&&r.linkedProfiles.length>0){r.linkedProfiles.forEach(function(lp){createBidirectionalLink(p.id,lp.name,lp.label);addLog(p.id,'Linked to '+lp.name+' ('+lp.label+')')})}
+    if(r.updates&&Object.keys(r.updates).length>0){['children','pets','interests','notes'].forEach(function(k){if(r.updates[k]&&p[k])r.updates[k]=p[k]+', '+r.updates[k]});Object.assign(p,r.updates);saveP();addLog(p.id,r.summary);showToast(r.summary);render()}
+    else if(r.linkedProfiles&&r.linkedProfiles.length>0){showToast(r.summary);render()}
+    return}
+  if(!S.settings.apiKey){showToast('Add API key in Settings');return}
+  showToast('Processing...');
+  try{var raw=await callLLM(text,p.name,cur);var parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    // Handle links from API
+    if(parsed.links&&parsed.links.length>0){parsed.links.forEach(function(lk){if(lk.name&&lk.label){createBidirectionalLink(p.id,lk.name,lk.label);addLog(p.id,'Linked to '+lk.name+' ('+lk.label+')')}})}
+    if((parsed.updates&&Object.keys(parsed.updates).length>0)||(parsed.links&&parsed.links.length>0)){if(parsed.updates)Object.assign(p,parsed.updates);saveP();addLog(p.id,parsed.summary||'Updated');showToast('Updated');genSummary(p.id);render()}else showToast('No updates detected')}catch(e){console.error(e);showToast(e.message||'Error')}
+}
+async function genSummary(id){var p=S.profiles.find(function(x){return x.id===id});if(!p||S.settings.provider==='local'||!S.settings.apiKey)return;showToast('Generating summary...');var f={};FIELD_DEFS.forEach(function(d){if(p[d.key])f[d.label]=p[d.key]});var logs=S.logs.filter(function(l){return l.profileId===id}).slice(0,10).map(function(l){return l.text});try{var s=await callSummary(p.name,f,logs);if(s){p.summary=s;saveP();render()}}catch(e){console.error(e)}}
+
+let tt;function showToast(msg){var t=$('.toast');if(t)t.remove();clearTimeout(tt);var el=h('div',{class:'toast'},msg);document.body.append(el);tt=setTimeout(function(){el.remove()},2500)}
+
+const app=document.getElementById('app');
+function render(){app.innerHTML='';if(S.view==='list')renderList();else if(S.view==='profile')renderProfile();else if(S.view==='edit')renderEdit();else if(S.view==='settings')renderSettings()}
+
+function renderList(){
+  var hdr=h('div',{class:'header'});var top=h('div',{class:'header-top'});
+  var title=h('div',{class:'header-title'});
+  var logoSvg='<svg class="logo-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="48" fill="#2C2520" stroke="none"/><circle cx="50" cy="50" r="40" fill="none" stroke="#B8874C" stroke-width="5"/><circle cx="50" cy="50" r="30" fill="none" stroke="#B8874C" stroke-width="4" opacity="0.6"/><circle cx="50" cy="50" r="21" fill="none" stroke="#B8874C" stroke-width="3" opacity="0.35"/><path d="M50 68 C50 68, 34 54, 34 44 C34 38, 39 34, 44 34 C47 34, 49 36, 50 38 C51 36, 53 34, 56 34 C61 34, 66 38, 66 44 C66 54, 50 68, 50 68Z" fill="#F5EDE0"/></svg>';
+  title.innerHTML=logoSvg+'<div class="header-title-text">Inner <span>Circle</span></div>';
+  top.append(title);
+  var acts=h('div',{class:'header-actions'});var mw=h('div',{style:{position:'relative'}});
+  mw.append(h('button',{class:'icon-btn',html:I.menu,onClick:function(e){e.stopPropagation();var ex=$('.dropdown-menu');if(ex){ex.remove();return}
+    var dd=h('div',{class:'dropdown-menu'});
+    dd.append(h('button',{class:'dropdown-item',onClick:function(){dd.remove();exportData()}},h('span',{html:I.download}),'Export'),h('button',{class:'dropdown-item',onClick:function(){dd.remove();importData()}},h('span',{html:I.upload}),'Import'),h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:function(){dd.remove();backupToDrive()}},h('span',{html:I.cloud}),'Backup to Drive'),h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:function(){dd.remove();S.view='settings';render()}},h('span',{html:I.settings}),'Settings'));
+    mw.append(dd);setTimeout(function(){document.addEventListener('click',function c(){dd.remove();document.removeEventListener('click',c)})},10)}}));
+  acts.append(mw,h('button',{class:'icon-btn primary',html:I.plus,onClick:showNewModal}));top.append(acts);hdr.append(top);
+  var sw=h('div',{class:'search-wrap'});sw.innerHTML='<span class="search-icon">'+I.search+'</span>';
+  var si=h('input',{class:'search-input',placeholder:'Search your circle\u2026',value:S.search,onInput:function(e){S.search=e.target.value;renderItems(sc)}});
+  sw.append(si);hdr.append(sw);app.append(hdr);
+  var sc=h('div',{class:'scroll'});renderItems(sc);app.append(sc);
+}
+
+function renderItems(c){
+  c.innerHTML='';var list=h('div',{class:'contact-list'});
+  var f=S.profiles.filter(function(p){return!S.search||p.name.toLowerCase().includes(S.search.toLowerCase())||(p.job||'').toLowerCase().includes(S.search.toLowerCase())||(p.relationship||'').toLowerCase().includes(S.search.toLowerCase())}).sort(function(a,b){return a.name.localeCompare(b.name)});
+  if(!f.length){
+    var emptyDiv=h('div',{class:'empty-state'});
+    var emptyIcon=h('div',{class:'empty-icon'});
+    emptyIcon.innerHTML='<svg width="32" height="32" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="none" stroke="#C4BAB0" stroke-width="2"/><circle cx="50" cy="50" r="36" fill="none" stroke="#C4BAB0" stroke-width="1.5" opacity="0.5"/><path d="M50 65 C50 65, 36 53, 36 45 C36 39, 40 36, 44 36 C47 36, 49 38, 50 39 C51 38, 53 36, 56 36 C60 36, 64 39, 64 45 C64 53, 50 65, 50 65Z" fill="none" stroke="#C4BAB0" stroke-width="1.5"/></svg>';
+    emptyDiv.append(emptyIcon,h('div',{class:'empty-title'},S.profiles.length?'No results':'Your circle is empty'),h('div',{class:'empty-sub'},S.profiles.length?'Try a different name':'Tap + to add someone you care about'));
+    list.append(emptyDiv)}
+  else f.forEach(function(p,i){
+    var it=h('div',{class:'contact-item',style:{'animation-delay':i*0.06+'s'},onClick:function(){S.activeId=p.id;S.view='profile';S.profileTab='details';render()}});
+    it.append(h('div',{class:'avatar',style:{background:getColor(p.name)}},initials(p.name)));
+    var info=h('div',{class:'contact-info'});info.append(h('div',{class:'contact-name'},p.name));
+    var sub=getSubtitle(p);if(sub)info.append(h('div',{class:'contact-sub'},sub));
+    if(p.relationship)info.append(h('div',{class:'relationship-tag'},p.relationship));
+    it.append(info,h('div',{class:'contact-badge'},timeAgo(p.createdAt)));list.append(it)});
+  c.append(list);
+}
+
+function showNewModal(){
+  var ov=h('div',{class:'modal-overlay',onClick:function(e){if(e.target===ov)ov.remove()}});
+  var md=h('div',{class:'modal'});
+  md.append(h('div',{class:'modal-header'},h('div',{class:'modal-title'},'Add to your circle'),h('button',{class:'icon-btn',html:I.x,onClick:function(){ov.remove()}})));
+  var fld=h('div',{style:{marginBottom:'20px'}});fld.append(h('div',{class:'edit-label'},'Full Name'));
+  var inp=h('input',{class:'edit-input',placeholder:'Their name\u2026',onKeydown:function(e){if(e.key==='Enter'&&inp.value.trim())go()}});
+  fld.append(inp);md.append(fld);
+  function go(){var n=inp.value.trim();if(!n)return;var p={id:uid(),name:n,createdAt:new Date().toISOString(),summary:''};S.profiles.push(p);saveP();addLog(p.id,'Profile created');ov.remove();S.activeId=p.id;S.view='profile';S.profileTab='details';render();showToast(n+' added')}
+  md.append(h('button',{class:'icon-btn accent wide',style:{width:'100%',height:'48px',borderRadius:'var(--radius)'},onClick:go},'Add Contact'));
+  ov.append(md);document.body.append(ov);setTimeout(function(){inp.focus()},100);
+}
+
+function renderProfile(){
+  var p=getActive();if(!p){S.view='list';render();return}
+  var hdr=h('div',{class:'profile-header'});
+  hdr.append(h('button',{class:'icon-btn',html:I.back,onClick:function(){S.view='list';S.activeId=null;render()}}));
+  hdr.append(h('div',{class:'profile-header-title'},p.name));
+  hdr.append(h('button',{class:'icon-btn',html:I.edit,onClick:function(){S.view='edit';render()}}));
+  hdr.append(h('button',{class:'icon-btn',style:{color:'var(--red)'},html:I.trash,onClick:function(){if(confirm('Remove '+p.name+'?')){S.profiles=S.profiles.filter(function(x){return x.id!==p.id});S.logs=S.logs.filter(function(l){return l.profileId!==p.id});saveP();saveL();S.view='list';S.activeId=null;render();showToast(p.name+' removed')}}}));
+  app.append(hdr);
+  var sc=h('div',{class:'scroll view-enter'});
+  var hero=h('div',{class:'profile-hero'});
+  hero.append(h('div',{class:'avatar avatar-lg',style:{background:getColor(p.name)}},initials(p.name)));
+  hero.append(h('div',{class:'profile-name'},p.name));
+  var sub=getSubtitle(p);if(sub)hero.append(h('div',{class:'profile-subtitle'},sub));
+  if(p.relationship)hero.append(h('div',{class:'profile-relationship'},h('span',{class:'relationship-tag',style:{fontSize:'12px'}},p.relationship)));
+  sc.append(hero);
+  sc.append(h('div',{class:'gold-line'}));
+  if(p.summary){var card=h('div',{class:'summary-card'});var lb=h('div',{class:'summary-label'});lb.innerHTML=I.sparkle+' Summary';lb.append(h('button',{class:'summary-refresh',onClick:function(){if(S.settings.provider==='local')generateLocalSummary(p.id);else genSummary(p.id)}},'Refresh'));card.append(lb,h('div',{class:'summary-text'},p.summary));sc.append(card)}
+  var pL=S.logs.filter(function(l){return l.profileId===S.activeId});
+  var tabs=h('div',{class:'tab-bar'});
+  tabs.append(h('button',{class:'tab'+(S.profileTab==='details'?' active':''),onClick:function(){S.profileTab='details';render()}},'Details'),h('button',{class:'tab'+(S.profileTab==='log'?' active':''),onClick:function(){S.profileTab='log';render()}},'Activity ('+pL.length+')'));
+  sc.append(tabs);
+  if(S.profileTab==='details'){
+    var filled=FIELD_DEFS.filter(function(f){return p[f.key]});
+    if(filled.length){var card2=h('div',{class:'fields-card'});filled.forEach(function(f){var row=h('div',{class:'field-row'});row.append(h('div',{class:'field-icon'},f.icon));var c2=h('div',{class:'field-content'});c2.append(h('div',{class:'field-label'},f.label),h('div',{class:'field-value'},f.key==='birthday'?fmtDate(p[f.key]):p[f.key]));row.append(c2);card2.append(row)});sc.append(card2)}
+    else sc.append(h('div',{class:'empty-state'},h('div',{class:'empty-icon'},'\u270E'),h('div',{class:'empty-title'},'No details yet'),h('div',{class:'empty-sub'},'Type below: \u201Cshe is my wife\u201D or \u201Cworks at Google\u201D')));
+    if(filled.length&&!p.summary){var btn=h('button',{class:'gen-summary-btn',onClick:function(){if(S.settings.provider==='local')generateLocalSummary(p.id);else genSummary(p.id)}});btn.innerHTML=I.sparkle+' Generate Summary';sc.append(btn)}
+    // Connections
+    var links=getProfileLinks(p.id);
+    if(links.length>0){
+      sc.append(h('div',{class:'section-title'},'Connections'));
+      var grid=h('div',{class:'connections-grid'});
+      links.forEach(function(lk){
+        var card4=h('div',{class:'conn-card',onClick:function(){S.activeId=lk.targetId;S.view='profile';S.profileTab='details';render()}});
+        card4.append(h('div',{class:'conn-avatar',style:{background:getColor(lk.targetName)}},initials(lk.targetName)));
+        var ci=h('div',{class:'conn-info'});
+        ci.append(h('div',{class:'conn-name'},lk.targetName));
+        ci.append(h('div',{class:'conn-rel'},lk.label));
+        card4.append(ci);
+        grid.append(card4);
+      });
+      sc.append(grid);
+    }
+  }else{
+    var card3=h('div',{class:'fields-card'});
+    if(!pL.length)card3.append(h('div',{style:{padding:'28px',textAlign:'center',color:'var(--text-muted)',fontSize:'13px',fontWeight:'300'}},'No activity yet'));
+    else pL.forEach(function(l,i){var it=h('div',{class:'log-item'});it.append(h('div',{class:'log-dot'+(i<3?' recent':'')}));var c3=h('div',{class:'log-content'});c3.append(h('div',{class:'log-text'},l.text),h('div',{class:'log-time'},timeAgo(l.timestamp)));it.append(c3);card3.append(it)});
+    sc.append(card3);
+  }
+  app.append(sc);
+  var bar=h('div',{class:'nlp-bar'});var inner=h('div',{class:'nlp-inner'});
+  var prov=S.settings.provider==='local'?'Local':S.settings.provider==='anthropic'?'Claude':S.settings.provider==='gemini'?'Gemini':S.settings.provider==='openai'?'GPT':'Pplx';
+  var inp=h('input',{class:'nlp-input',placeholder:S.settings.provider==='local'?'\u201Cshe is my wife\u201D, \u201Cworks at Google\u201D\u2026':'Add details naturally\u2026',onKeydown:function(e){if(e.key==='Enter'&&inp.value.trim())processNLP(inp.value,inp)}});
+  var mic=h('button',{class:'nlp-btn nlp-mic'+(isRec?' recording':''),html:I.mic,onClick:function(){toggleRec(inp)}});
+  var snd=h('button',{class:'nlp-btn nlp-send',html:I.send,onClick:function(){if(inp.value.trim())processNLP(inp.value,inp)}});
+  inner.append(h('span',{class:'nlp-mode-tag'},prov),inp,mic,snd);bar.append(inner);app.append(bar);
+}
+
+var isRec=false,recog=null;
+function toggleRec(inp){
+  if(isRec){recog?.stop();isRec=false;render();return}
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){showToast('Speech not supported');return}
+  recog=new SR();recog.continuous=false;recog.interimResults=false;recog.lang='en-US';
+  recog.onresult=function(e){processNLP(e.results[0][0].transcript)};
+  recog.onerror=function(){isRec=false;render()};recog.onend=function(){isRec=false;render()};
+  recog.start();isRec=true;render();
+}
+
+function renderEdit(){
+  var p=getActive();if(!p){S.view='list';render();return}
+  var hdr=h('div',{class:'profile-header'});
+  hdr.append(h('button',{class:'icon-btn',html:I.x,onClick:function(){S.view='profile';render()}}),h('div',{class:'profile-header-title'},'Edit Profile'),h('button',{class:'icon-btn accent',html:I.check,onClick:function(){
+    var ch=[];var ni=$('[data-field="name"]');if(ni&&ni.value!==p.name){p.name=ni.value;ch.push('Name')}
+    FIELD_DEFS.forEach(function(f){var el=$('[data-field="'+f.key+'"]');if(el){var nv=el.value;if(nv!==(p[f.key]||'')){p[f.key]=nv;ch.push(f.label)}}});
+    saveP();if(ch.length){addLog(p.id,'Updated: '+ch.join(', '));if(S.settings.provider==='local')generateLocalSummary(p.id);else genSummary(p.id)}
+    S.view='profile';render();showToast('Saved')}}));
+  app.append(hdr);
+  var sc=h('div',{class:'scroll view-enter'});var w=h('div',{style:{padding:'24px'}});var card=h('div',{class:'fields-card',style:{margin:'0'}});
+  var nf=h('div',{class:'edit-field'});nf.append(h('div',{class:'edit-label'},'Full Name'),h('input',{class:'edit-input','data-field':'name',value:p.name||''}));card.append(nf);
+  FIELD_DEFS.forEach(function(f){var ef=h('div',{class:'edit-field'});ef.append(h('div',{class:'edit-label'},f.icon+' '+f.label));
+    if(f.type==='textarea')ef.append(h('textarea',{class:'edit-input edit-textarea','data-field':f.key,placeholder:f.placeholder||''},p[f.key]||''));
+    else ef.append(h('input',{class:'edit-input',type:f.type,'data-field':f.key,value:p[f.key]||'',placeholder:f.placeholder||''}));card.append(ef)});
+  w.append(card);sc.append(w);app.append(sc);
+}
+
+function renderSettings(){
+  var hdr=h('div',{class:'profile-header'});
+  hdr.append(h('button',{class:'icon-btn',html:I.back,onClick:function(){S.view='list';render()}}),h('div',{class:'profile-header-title'},'Settings'));
+  app.append(hdr);
+  var sc=h('div',{class:'scroll view-enter'});
+  sc.append(h('div',{class:'section-title',style:{marginTop:'24px'}},'AI Provider'));
+  var ps=h('div',{class:'settings-section'});var pc=h('div',{class:'settings-card'});
+  Object.entries(PROVIDERS).forEach(function(entry){var k=entry[0],v=entry[1];
+    var opt=h('div',{class:'provider-option',onClick:function(){S.settings.provider=k;saveS();render()}});
+    opt.append(h('div',{class:'provider-radio'+(S.settings.provider===k?' selected':'')}));
+    var info=h('div',{class:'provider-info'});info.append(h('div',{class:'provider-name'},v.name),h('div',{class:'provider-desc'},v.desc));
+    opt.append(info);pc.append(opt)});
+  ps.append(pc);sc.append(ps);
+  var cp=PROVIDERS[S.settings.provider];
+  if(cp.needsKey){
+    sc.append(h('div',{class:'section-title'},'API Key'));
+    var ks=h('div',{class:'settings-section'});var kc=h('div',{class:'settings-card'});var kr=h('div',{class:'settings-row'});
+    kr.append(h('div',{class:'settings-label'},cp.name+' API Key'));
+    var help=S.settings.provider==='anthropic'?'Get at console.anthropic.com':S.settings.provider==='gemini'?'Get free at aistudio.google.com \u2014 1000 req/day free':S.settings.provider==='openai'?'Get at platform.openai.com':'Get at perplexity.ai/settings/api';
+    kr.append(h('div',{class:'settings-desc'},help));
+    kr.append(h('div',{class:'api-status '+(S.settings.apiKey?'active':'inactive')},S.settings.apiKey?'\u25CF Connected':'\u25CB Not set'));
+    var ki=h('input',{class:'edit-input',type:'password',placeholder:cp.ph||'API key\u2026',value:S.settings.apiKey||'',style:{marginTop:'10px'}});kr.append(ki);
+    kr.append(h('div',{class:'settings-label',style:{marginTop:'14px'}},'Model (optional)'));
+    var def=S.settings.provider==='anthropic'?'claude-sonnet-4-20250514':S.settings.provider==='gemini'?'gemini-2.5-flash':S.settings.provider==='openai'?'gpt-4o-mini':'sonar';
+    var mi=h('input',{class:'edit-input',placeholder:def,value:S.settings.model||''});
+    kr.append(h('div',{class:'settings-desc'},'Default: '+def),mi);
+    kr.append(h('button',{class:'icon-btn accent wide',style:{width:'100%',height:'44px',borderRadius:'var(--radius)',marginTop:'14px'},onClick:function(){S.settings.apiKey=ki.value.trim();S.settings.model=mi.value.trim();saveS();render();showToast('Saved')}},'Save'));
+    kc.append(kr);ks.append(kc);sc.append(ks);
+  }
+  sc.append(h('div',{class:'section-title'},'Data'));
+  var ds=h('div',{class:'settings-section'});var dc=h('div',{class:'settings-card'});
+  dc.append(h('button',{class:'dropdown-item',onClick:exportData},h('span',{html:I.download}),'Export Backup'));
+  dc.append(h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:importData},h('span',{html:I.upload}),'Import Backup'));
+  dc.append(h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:backupToDrive},h('span',{html:I.cloud}),'Backup to Drive'));
+  ds.append(dc);sc.append(ds);
+  sc.append(h('div',{class:'section-title'},'About'));
+  var is2=h('div',{class:'settings-section'});var ic=h('div',{class:'settings-card'});
+  ic.append(h('div',{class:'settings-row'},h('div',{class:'settings-label'},'Inner Circle'),h('div',{class:'settings-desc'},S.profiles.length+' contacts \u00B7 '+S.logs.length+' entries \u00B7 Data stored locally.')));
+  is2.append(ic);sc.append(is2);app.append(sc);
+}
+
+function exportData(){var d={profiles:S.profiles,logs:S.logs,exportedAt:new Date().toISOString()};var b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='inner-circle-'+new Date().toISOString().split('T')[0]+'.json';a.click();URL.revokeObjectURL(a.href);showToast('Exported')}
+function importData(){var i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){try{var d=JSON.parse(ev.target.result);if(d.profiles){S.profiles=d.profiles;saveP()}if(d.logs){S.logs=d.logs;saveL()}render();showToast('Imported')}catch(err){showToast('Invalid file')}};r.readAsText(f)};i.click()}
+function backupToDrive(){var d={profiles:S.profiles,logs:S.logs,exportedAt:new Date().toISOString()};var b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});var f=new File([b],'inner-circle-'+new Date().toISOString().split('T')[0]+'.json',{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],title:'Inner Circle Backup'}).then(function(){showToast('Shared')}).catch(function(){exportData()});else{exportData();window.open('https://drive.google.com/drive/my-drive','_blank');showToast('File downloaded \u2014 upload to Drive')}}
+
+load();render();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+</script>
+</body>
+</html>
