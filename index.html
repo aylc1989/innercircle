@@ -856,20 +856,63 @@ svg { display: block; }
   background: var(--surface); color: var(--text); outline: none; margin-bottom: 10px;
 }
 .conn-modal-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-.edit-conn-section { padding: 16px 0 0; }
-.edit-conn-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.edit-conn-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-light);
+}
 .edit-conn-row:last-child { border-bottom: none; }
-.edit-conn-name { font-size: 13px; font-weight: 500; flex-shrink: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
-.edit-conn-select { flex: 1; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 12px; font-family: var(--font); color: var(--text); appearance: auto; }
-.edit-conn-remove { width: 28px; height: 28px; border: none; background: none; color: var(--red); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0; }
-.edit-conn-remove:active { background: rgba(200,50,50,0.1); }
-.edit-conn-add { width: 100%; padding: 10px; margin-top: 8px; border: 1px dashed var(--border); border-radius: var(--radius); background: none; color: var(--accent); font-size: 13px; font-family: var(--font); font-weight: 500; cursor: pointer; }
-.edit-conn-add:active { background: var(--surface-warm); }
-.add-conn-picker { padding: 12px 0; display: flex; flex-direction: column; gap: 10px; }
-.add-conn-picker select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 13px; font-family: var(--font); color: var(--text); width: 100%; }
-.add-conn-actions { display: flex; gap: 8px; }
-.add-conn-actions button { flex: 1; padding: 8px; border-radius: 8px; font-size: 13px; font-family: var(--font); font-weight: 500; cursor: pointer; border: 1px solid var(--border); }
-.add-conn-confirm { background: var(--accent) !important; color: white !important; border-color: var(--accent) !important; }
+.edit-conn-name {
+  font-size: 13px; font-weight: 500; color: var(--text);
+  flex-shrink: 1; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.edit-conn-select {
+  flex: 0 0 auto; width: 110px;
+  padding: 6px 10px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--bg-warm);
+  font-size: 12px; font-family: var(--font-body); color: var(--text-secondary);
+  appearance: auto; cursor: pointer;
+}
+.edit-conn-remove {
+  width: 28px; height: 28px; border: none; background: none;
+  color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; flex-shrink: 0;
+  transition: all 0.2s var(--ease-out);
+}
+.edit-conn-remove:hover { color: var(--red); background: var(--red-soft); }
+.edit-conn-remove:active { transform: scale(0.9); }
+.edit-conn-add {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 14px 18px;
+  background: none; border: none; border-top: 1px solid var(--border-light);
+  color: var(--accent); font-size: 13px; font-family: var(--font-body);
+  font-weight: 500; cursor: pointer; width: 100%;
+  transition: background 0.2s;
+}
+.edit-conn-add:active { background: var(--accent-soft); }
+.add-conn-picker {
+  padding: 14px 18px; display: flex; flex-direction: column; gap: 10px;
+  border-top: 1px solid var(--border-light); background: var(--bg-warm);
+}
+.add-conn-picker select {
+  padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface);
+  font-size: 13px; font-family: var(--font-body); color: var(--text); width: 100%;
+}
+.add-conn-actions { display: flex; gap: 8px; margin-top: 2px; }
+.add-conn-actions button {
+  flex: 1; padding: 10px; border-radius: var(--radius-sm);
+  font-size: 13px; font-family: var(--font-body); font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-secondary); transition: all 0.2s;
+}
+.add-conn-actions button:active { transform: scale(0.97); }
+.add-conn-confirm {
+  background: var(--accent) !important; color: white !important;
+  border-color: var(--accent) !important;
+}
 </style>
 </head>
 <body>
@@ -1113,19 +1156,26 @@ function deleteActivity(logId){
 }
 
 var CONN_LABELS=['Father','Mother','Brother','Sister','Son','Daughter','Husband','Wife','Spouse','Partner','Friend','Best Friend','Colleague','Boss','Manager','Uncle','Aunt','Cousin','Grandfather','Grandmother','Nephew','Niece','Boyfriend','Girlfriend'];
+var SPOUSE_LABELS=/^(husband|wife|spouse|partner|boyfriend|girlfriend)$/i;
 function removeLink(fromId,toId){
   var from=S.profiles.find(function(p){return p.id===fromId});
-  if(from&&from.links)from.links=from.links.filter(function(l){return l.targetId!==toId});
   var to=S.profiles.find(function(p){return p.id===toId});
+  // Clear partner fields if removing a spouse-type link
+  if(from&&from.links){var oldLk=from.links.find(function(l){return l.targetId===toId});if(oldLk&&SPOUSE_LABELS.test(oldLk.label)&&to&&from.partner&&from.partner.toLowerCase()===to.name.toLowerCase())from.partner=''}
+  if(to&&to.links){var oldRl=to.links.find(function(l){return l.targetId===fromId});if(oldRl&&SPOUSE_LABELS.test(oldRl.label)&&from&&to.partner&&to.partner.toLowerCase()===from.name.toLowerCase())to.partner=''}
+  if(from&&from.links)from.links=from.links.filter(function(l){return l.targetId!==toId});
   if(to&&to.links)to.links=to.links.filter(function(l){return l.targetId!==fromId});
   saveP();
 }
 function updateLinkLabel(fromId,toId,newLabel){
   var from=S.profiles.find(function(p){return p.id===fromId});
+  var to=S.profiles.find(function(p){return p.id===toId});
   if(from&&from.links){var lk=from.links.find(function(l){return l.targetId===toId});if(lk)lk.label=newLabel}
   var rev=REVERSE_REL[newLabel.toLowerCase()]||'Connected';
-  var to=S.profiles.find(function(p){return p.id===toId});
   if(to&&to.links){var rl=to.links.find(function(l){return l.targetId===fromId});if(rl)rl.label=rev}
+  // Sync partner fields for spouse-type labels
+  if(SPOUSE_LABELS.test(newLabel)){if(from&&to)from.partner=to.name;if(to&&from)to.partner=from.name}
+  else{if(from&&to&&from.partner&&from.partner.toLowerCase()===to.name.toLowerCase())from.partner='';if(to&&from&&to.partner&&to.partner.toLowerCase()===from.name.toLowerCase())to.partner=''}
   saveP();
 }
 
@@ -1470,9 +1520,9 @@ function renderEdit(){
   w.append(card);
   // Connections editor
   var links=getProfileLinks(p.id);
-  var connCard=h('div',{class:'fields-card',style:{margin:'16px 0 0'}});
-  connCard.append(h('div',{class:'edit-label',style:{marginBottom:'4px'}},'Connections'));
-  var connWrap=h('div',{class:'edit-conn-section'});
+  w.append(h('div',{class:'section-title',style:{marginTop:'20px'}},'Connections'));
+  var connCard=h('div',{class:'fields-card',style:{margin:'0'}});
+  var connWrap=h('div');
   links.forEach(function(lk){
     var row=h('div',{class:'edit-conn-row'});
     row.append(h('div',{class:'conn-avatar',style:{background:getColor(lk.targetName),width:'28px',height:'28px',fontSize:'10px'}},initials(lk.targetName)));
@@ -1507,6 +1557,7 @@ function renderEdit(){
       addLink(p.id,target.id,target.name,lab);
       var rev=REVERSE_REL[lab.toLowerCase()]||'Connected';
       addLink(target.id,p.id,p.name,rev);
+      if(SPOUSE_LABELS.test(lab)){p.partner=target.name;target.partner=p.name;saveP()}
       addLog(p.id,'Linked to '+target.name+' ('+lab+')');
       render();showToast('Connected to '+target.name);
     }},'Add'));
