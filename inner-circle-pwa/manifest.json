@@ -1,0 +1,24 @@
+{
+  "name": "Inner Circle",
+  "short_name": "Inner Circle",
+  "description": "Your personal relationship manager",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F6F1",
+  "theme_color": "#2C2520",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
