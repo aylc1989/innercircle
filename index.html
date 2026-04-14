@@ -937,6 +937,25 @@ function getProfileLinks(profileId){
   });
 }
 
+// Silently rebuild summary text without logging, toasting, or re-rendering
+function rebuildSummary(p){
+  var parts=[];
+  if(p.relationship)parts.push(p.name+' is your '+p.relationship.toLowerCase()+'.');
+  if(p.job&&p.company)parts.push((p.relationship?'They work':'Works')+' as a '+p.job+' at '+p.company+'.');
+  else if(p.job)parts.push((p.relationship?'They work':'Works')+' as a '+p.job+'.');
+  else if(p.company)parts.push((p.relationship?'They work':'Works')+' at '+p.company+'.');
+  if(p.address)parts.push('Based in '+p.address+'.');
+  if(p.partner)parts.push('Partner: '+p.partner+'.');
+  if(p.children)parts.push('Children: '+p.children+'.');
+  if(p.pets)parts.push('Pets: '+p.pets+'.');
+  if(p.birthday){var age=Math.floor((Date.now()-new Date(p.birthday+'T00:00:00'))/(365.25*24*60*60*1e3));if(age>0&&age<120)parts.push('Age '+age+'.');else parts.push('Birthday: '+fmtDate(p.birthday)+'.')}
+  if(p.interests)parts.push('Enjoys '+p.interests+'.');
+  var links=getProfileLinks(p.id);
+  if(links.length>0)parts.push('Connected to '+links.map(function(l){return l.targetName+' ('+l.label+')'}).join(', ')+'.');
+  p.summary=parts.length>0?parts.join(' '):'';
+  saveP();
+}
+
 // === ACTIVITY DELETION WITH UNDO ===
 function deleteActivity(logId){
   var log=S.logs.find(function(l){return l.id===logId});if(!log)return;
@@ -967,13 +986,14 @@ function deleteActivity(logId){
   // Remove the log entry itself
   S.logs=S.logs.filter(function(l){return l.id!==logId});
   saveL();
-  // Regenerate summary if profile still exists
+  // Silently regenerate summary if profile still exists
   if(p){
     var hasData=FIELD_DEFS.some(function(f){return p[f.key]})||getProfileLinks(p.id).length>0;
-    if(hasData&&S.settings.provider==='local'){p.summary='';saveP();generateLocalSummary(p.id)}
-    else if(!hasData){p.summary='';saveP()}
+    if(hasData){rebuildSummary(p)}
+    else{p.summary='';saveP()}
   }
-  showToast('Activity deleted & changes undone');render();
+  showToast('Activity deleted & changes undone');
+  render();
 }
 
 // === LOCAL NLP (comprehensive) ===
@@ -982,6 +1002,8 @@ var RELS='wife|husband|partner|girlfriend|boyfriend|fianc[eé]+|sister|brother|m
 var LINK_RELS='father|mother|dad|mom|brother|sister|son|daughter|husband|wife|spouse|partner|uncle|aunt|cousin|grandfather|grandmother|grandpa|grandma|boss|friend|best friend|colleague|nephew|niece';
 function clean(s){return s.trim().replace(/[.!,;]+$/,'')}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+function titleCase(s){return s.replace(/\w\S*/g,function(t){return t.charAt(0).toUpperCase()+t.slice(1).toLowerCase()})}
+var TITLE_CASE_FIELDS={job:1,company:1,relationship:1,address:1};
 function tryDate(s){s=clean(s);var d=new Date(s);if(!isNaN(d)&&d.getFullYear()>1900&&d.getFullYear()<2030)return d.toISOString().split('T')[0];var s2=s.replace(/(\d+)(?:st|nd|rd|th)/gi,'$1');d=new Date(s2);if(!isNaN(d)&&d.getFullYear()>1900)return d.toISOString().split('T')[0];return null}
 
 function localParse(text,name){
@@ -1009,15 +1031,15 @@ function localParse(text,name){
     if(pm&&!up.partner){up.partner=clean(pm[1]||pm[2]);m.push('Partner: '+up.partner);continue}
     // Job+Company compound: "works at Google as a designer" / "she's a designer at Google"
     var jc=pt.match(/(?:works?|working)\s+(?:at|for)\s+(.+?)\s+as\s+(?:a|an)\s+(.+)/i);
-    if(jc){if(!up.company){up.company=clean(jc[1]);m.push('Company: '+up.company)}if(!up.job){up.job=clean(jc[2]);m.push('Job: '+up.job)}continue}
+    if(jc){if(!up.company){up.company=titleCase(clean(jc[1]));m.push('Company: '+up.company)}if(!up.job){up.job=titleCase(clean(jc[2]));m.push('Job: '+up.job)}continue}
     var jc2=pt.match(/(?:is|are|'s)\s+(?:a|an)\s+(.+?)\s+(?:at|for)\s+(.+)/i);
-    if(jc2){if(!up.job){up.job=clean(jc2[1]);m.push('Job: '+up.job)}if(!up.company){up.company=clean(jc2[2]);m.push('Company: '+up.company)}continue}
+    if(jc2){if(!up.job){up.job=titleCase(clean(jc2[1]));m.push('Job: '+up.job)}if(!up.company){up.company=titleCase(clean(jc2[2]));m.push('Company: '+up.company)}continue}
     // Job only
     var jm=pt.match(/(?:works?|working)\s+as\s+(?:a|an)\s+(.+)/i)||pt.match(new RegExp("(?:is|are|'s)\\s+(?:a|an)\\s+([\\w\\s]*?(?:"+JOBS+"))","i"))||pt.match(/(?:started|got)\s+(?:a\s+)?(?:new\s+)?(?:job|role|position)\s+as\s+(?:a\s+|an\s+)?(.+?)(?:\s+at\s+|\s+for\s+|$)/i)||pt.match(/(?:does|do)\s+([\w\s]+?(?:work|consulting|marketing|sales|design|engineering|finance|accounting|law|medicine|teaching|research|writing))/i)||pt.match(/(?:works?|working)\s+in\s+([\w\s]+?)$/i)||pt.match(/(?:got\s+)?promoted\s+to\s+(?:a\s+|an\s+)?(.+)/i);
-    if(jm&&!up.job){up.job=clean(jm[1]);m.push('Job: '+up.job)}
+    if(jm&&!up.job){up.job=titleCase(clean(jm[1]));m.push('Job: '+up.job)}
     // Company only
     var cm=pt.match(/(?:works?|working|started|joined|hired|employed)\s+(?:at|for|by)\s+(.+?)(?:\s+as\s+|$)/i)||pt.match(/(?:just\s+)?(?:joined|started\s+at)\s+(.+)/i)||pt.match(/(?:got\s+(?:a\s+)?(?:new\s+)?(?:job|role|offer))\s+(?:at|from|with)\s+(.+?)(?:\s+as\s+|$)/i);
-    if(cm&&!up.company&&!up.job){var cv=clean(cm[1]||cm[2]);if(cv.length<50){up.company=cv;m.push('Company: '+cv)}}
+    if(cm&&!up.company&&!up.job){var cv=titleCase(clean(cm[1]||cm[2]));if(cv.length<50){up.company=cv;m.push('Company: '+cv)}}
     // Birthday
     var bm=pt.match(/(?:birthday|born|birth\s*date|dob|bday)\s+(?:is\s+)?(?:on\s+)?(.+)/i)||pt.match(/born\s+(?:on\s+)?(.+)/i);
     if(bm&&!up.birthday){var parsed=tryDate(bm[1]);if(parsed){up.birthday=parsed;m.push('Birthday: '+fmtDate(parsed))}}
@@ -1029,7 +1051,7 @@ function localParse(text,name){
     if(agm&&!up.birthday&&!up.job){var age=parseInt(agm[1]);if(age>0&&age<120){var by=new Date().getFullYear()-age;up.birthday=by+'-01-01';m.push('Age ~'+age+' (born ~'+by+')')}}
     // Location
     var lm=pt.match(/(?:lives?|living|moved|relocated|moving|based|resides?)\s+(?:in|to|at|near)\s+(.+)/i)||pt.match(/(?:from|hometown\s+is)\s+(.+)/i)||pt.match(/(?:just\s+)?moved\s+to\s+(.+)/i);
-    if(lm&&!up.address&&!up.company){up.address=clean(lm[1]);m.push('Location: '+up.address)}
+    if(lm&&!up.address&&!up.company){up.address=titleCase(clean(lm[1]));m.push('Location: '+up.address)}
     // Email
     var em=pt.match(/([\w.+-]+@[\w-]+\.[\w.]+)/);if(em&&!up.email){up.email=em[1];m.push('Email: '+em[1])}
     // Phone
@@ -1141,8 +1163,8 @@ async function processNLP(text,inputEl){
       addLog(p.id,'Linked to '+lk.name+' ('+lk.label+')',{linksAdded:[{sourceId:p.id,targetId:result?result.target.id:null,label:lk.label,reverseLabel:result?result.reverseLabel:null}],profilesCreated:result&&result.wasNew?[result.target.id]:[],fieldChanges:{}})
     }})}
     if((parsed.updates&&Object.keys(parsed.updates).length>0)||(parsed.links&&parsed.links.length>0)){
-      var prevFields2={};if(parsed.updates)Object.keys(parsed.updates).forEach(function(k){prevFields2[k]=p[k]||''});
-      if(parsed.updates)Object.assign(p,parsed.updates);saveP();
+      var prevFields2={};if(parsed.updates){Object.keys(parsed.updates).forEach(function(k){prevFields2[k]=p[k]||'';if(TITLE_CASE_FIELDS[k]&&parsed.updates[k])parsed.updates[k]=titleCase(parsed.updates[k])});
+      Object.assign(p,parsed.updates)}saveP();
       addLog(p.id,parsed.summary||'Updated',{fieldChanges:prevFields2,linksAdded:undoLinks2,profilesCreated:undoProfiles2});
       showToast('Updated');genSummary(p.id);render()}else showToast('No updates detected')}catch(e){console.error(e);showToast(e.message||'Error')}
 }
@@ -1276,7 +1298,7 @@ function renderEdit(){
   var hdr=h('div',{class:'profile-header'});
   hdr.append(h('button',{class:'icon-btn',html:I.x,onClick:function(){S.view='profile';render()}}),h('div',{class:'profile-header-title'},'Edit Profile'),h('button',{class:'icon-btn accent',html:I.check,onClick:function(){
     var ch=[];var prevFields={};var ni=$('[data-field="name"]');if(ni&&ni.value!==p.name){prevFields.name=p.name;p.name=ni.value;ch.push('Name')}
-    FIELD_DEFS.forEach(function(f){var el=$('[data-field="'+f.key+'"]');if(el){var nv=el.value;if(nv!==(p[f.key]||'')){prevFields[f.key]=p[f.key]||'';p[f.key]=nv;ch.push(f.label)}}});
+    FIELD_DEFS.forEach(function(f){var el=$('[data-field="'+f.key+'"]');if(el){var nv=el.value;if(nv&&TITLE_CASE_FIELDS[f.key])nv=titleCase(nv);if(nv!==(p[f.key]||'')){prevFields[f.key]=p[f.key]||'';p[f.key]=nv;ch.push(f.label)}}});
     saveP();if(ch.length){addLog(p.id,'Updated: '+ch.join(', '),{fieldChanges:prevFields,linksAdded:[],profilesCreated:[]});if(S.settings.provider==='local')generateLocalSummary(p.id);else genSummary(p.id)}
     S.view='profile';render();showToast('Saved')}}));
   app.append(hdr);
