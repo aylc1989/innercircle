@@ -569,6 +569,7 @@ html, body {
   font-size: 13px;
 }
 .log-item:last-child { border-bottom: none; }
+.log-item:hover .log-delete-btn { opacity: 1; }
 .log-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
@@ -577,8 +578,27 @@ html, body {
   flex-shrink: 0;
 }
 .log-dot.recent { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+.log-content { flex: 1; min-width: 0; }
 .log-text { color: var(--text-secondary); line-height: 1.6; font-weight: 400; }
 .log-time { font-size: 10px; color: var(--text-muted); margin-top: 3px; font-weight: 400; letter-spacing: 0.02em; }
+.log-delete-btn {
+  width: 28px; height: 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  align-self: center;
+  opacity: 0.4;
+  transition: all 0.2s var(--ease-out);
+}
+.log-delete-btn:hover { opacity: 1; color: var(--red); background: var(--red-soft); }
+.log-delete-btn:active { transform: scale(0.9); }
+.log-delete-btn svg { width: 12px; height: 12px; }
 
 /* ─── Edit ─── */
 .edit-input {
@@ -856,7 +876,7 @@ function load(){try{S.profiles=JSON.parse(localStorage.getItem(PROFILES_KEY)||'[
 function saveP(){localStorage.setItem(PROFILES_KEY,JSON.stringify(S.profiles))}
 function saveL(){localStorage.setItem(LOGS_KEY,JSON.stringify(S.logs))}
 function saveS(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(S.settings))}
-function addLog(pid,text){S.logs.unshift({id:uid(),profileId:pid,text,timestamp:new Date().toISOString()});saveL()}
+function addLog(pid,text,undoData){var entry={id:uid(),profileId:pid,text,timestamp:new Date().toISOString()};if(undoData)entry.undoData=undoData;S.logs.unshift(entry);saveL()}
 function getActive(){return S.profiles.find(p=>p.id===S.activeId)}
 
 // === RELATIONSHIP LINKING ===
@@ -900,13 +920,14 @@ function addLink(fromId,toId,toName,label){
   saveP();
 }
 function createBidirectionalLink(sourceId,targetName,relLabel){
+  var wasNew=!findProfileByName(targetName);
   var target=findOrCreateProfile(targetName);
   var source=S.profiles.find(function(p){return p.id===sourceId});
   if(!source||!target)return null;
   addLink(sourceId,target.id,target.name,relLabel);
   var rev=REVERSE_REL[relLabel.toLowerCase()]||'Connected';
   addLink(target.id,sourceId,source.name,rev);
-  return target;
+  return{target:target,wasNew:wasNew,reverseLabel:rev};
 }
 function getProfileLinks(profileId){
   var p=S.profiles.find(function(x){return x.id===profileId});
@@ -914,6 +935,45 @@ function getProfileLinks(profileId){
   return p.links.filter(function(l){
     return S.profiles.some(function(pr){return pr.id===l.targetId});
   });
+}
+
+// === ACTIVITY DELETION WITH UNDO ===
+function deleteActivity(logId){
+  var log=S.logs.find(function(l){return l.id===logId});if(!log)return;
+  var p=S.profiles.find(function(x){return x.id===log.profileId});
+  if(log.undoData){
+    var ud=log.undoData;
+    // Restore previous field values
+    if(ud.fieldChanges&&p){Object.keys(ud.fieldChanges).forEach(function(k){
+      if(ud.fieldChanges[k]==='')delete p[k];else p[k]=ud.fieldChanges[k];
+    })}
+    // Remove links that were added
+    if(ud.linksAdded&&ud.linksAdded.length>0){ud.linksAdded.forEach(function(lk){
+      // Remove forward link from source
+      var src=S.profiles.find(function(x){return x.id===lk.sourceId});
+      if(src&&src.links)src.links=src.links.filter(function(l){return l.targetId!==lk.targetId});
+      // Remove reverse link from target
+      var tgt=S.profiles.find(function(x){return x.id===lk.targetId});
+      if(tgt&&tgt.links)tgt.links=tgt.links.filter(function(l){return l.targetId!==lk.sourceId});
+    })}
+    // Remove auto-created profiles
+    if(ud.profilesCreated&&ud.profilesCreated.length>0){ud.profilesCreated.forEach(function(pid){
+      S.profiles=S.profiles.filter(function(x){return x.id!==pid});
+      // Also remove any logs for that profile
+      S.logs=S.logs.filter(function(l){return l.profileId!==pid});
+    })}
+    saveP();
+  }
+  // Remove the log entry itself
+  S.logs=S.logs.filter(function(l){return l.id!==logId});
+  saveL();
+  // Regenerate summary if profile still exists
+  if(p){
+    var hasData=FIELD_DEFS.some(function(f){return p[f.key]})||getProfileLinks(p.id).length>0;
+    if(hasData&&S.settings.provider==='local'){p.summary='';saveP();generateLocalSummary(p.id)}
+    else if(!hasData){p.summary='';saveP()}
+  }
+  showToast('Activity deleted & changes undone');render();
 }
 
 // === LOCAL NLP (comprehensive) ===
@@ -928,16 +988,19 @@ function localParse(text,name){
   var t=text.trim(),tl=t.toLowerCase(),up={},m=[],linkedProfiles=[];
   // Split compound sentences for multi-fact input
   var parts=[t];
-  if(t.includes(' and ')&&t.length>40&&!tl.match(/(?:father|mother|dad|mom|brother|sister)\s+is/i)){
+  if(t.includes(' and ')&&t.length>40&&!tl.match(/(?:father|mother|dad|mom|brother|sister)(?:'s\s+name)?\s+is/i)){
     parts=t.split(/\s+and\s+/i).map(function(p){return p.trim()}).filter(Boolean);
   }
   for(var pi=0;pi<parts.length;pi++){
     var pt=parts[pi],ptl=pt.toLowerCase();
-    // Cross-profile links: "her father is Gary Foster"
-    var cx1=pt.match(new RegExp("(?:her|his|their)\\s+("+LINK_RELS+")\\s+is\\s+(.+?)(?:\\s+and\\s+|$)","i"));
+    // Cross-profile links: "her father is Gary Foster", "her father's name is Julie Foster"
+    var cx1=pt.match(new RegExp("(?:her|his|their)\\s+("+LINK_RELS+")(?:'s\\s+name)?\\s+is\\s+(.+?)(?:\\s+and\\s+|$)","i"));
     if(cx1){linkedProfiles.push({name:clean(cx1[2]),label:cap(cx1[1])});m.push(cap(cx1[1])+': '+clean(cx1[2]));continue}
-    var cx2=pt.match(new RegExp("(.+?)(?:'s|s')\\s+("+LINK_RELS+")\\s+is\\s+(.+?)(?:\\s+and\\s+|$)","i"));
+    var cx2=pt.match(new RegExp("(.+?)(?:'s|s')\\s+("+LINK_RELS+")(?:'s\\s+name)?\\s+is\\s+(.+?)(?:\\s+and\\s+|$)","i"));
     if(!cx1&&cx2){linkedProfiles.push({name:clean(cx2[3]),label:cap(cx2[2])});m.push(cap(cx2[2])+': '+clean(cx2[3]));continue}
+    // Cross-profile links: "her father is named Julie Foster"
+    var cx3=pt.match(new RegExp("(?:her|his|their)\\s+("+LINK_RELS+")\\s+is\\s+named\\s+(.+?)(?:\\s+and\\s+|$)","i"));
+    if(cx3){linkedProfiles.push({name:clean(cx3[2]),label:cap(cx3[1])});m.push(cap(cx3[1])+': '+clean(cx3[2]));continue}
     // Relationship to user
     var rm=ptl.match(new RegExp("(?:she|he|they|this)?\\s*(?:is|are|'s)\\s+my\\s+("+RELS+")","i"))||ptl.match(new RegExp("^(?:my|that'?s my|this is my)\\s+("+RELS+")","i"))||ptl.match(/we(?:'re|\s+are)\s+(married|engaged|dating|friends|coworkers|colleagues|roommates|neighbors)/i);
     if(rm&&!up.relationship){var rv=clean(rm[1]);if(rv==='married')rv='Spouse';else if(rv==='engaged')rv='Fiancé(e)';else if(rv==='dating')rv='Partner';else if(rv==='friends')rv='Friend';up.relationship=cap(rv);m.push('Relationship: '+up.relationship);continue}
@@ -1052,17 +1115,36 @@ async function processNLP(text,inputEl){
   var p=getActive();if(!p||!text.trim())return;if(inputEl)inputEl.value='';
   var cur={};FIELD_DEFS.forEach(function(f){if(p[f.key])cur[f.key]=p[f.key]});
   if(S.settings.provider==='local'){var r=localParse(text,p.name);
+    var undoLinks=[];var undoProfiles=[];
     // Handle cross-profile links
-    if(r.linkedProfiles&&r.linkedProfiles.length>0){r.linkedProfiles.forEach(function(lp){createBidirectionalLink(p.id,lp.name,lp.label);addLog(p.id,'Linked to '+lp.name+' ('+lp.label+')')})}
-    if(r.updates&&Object.keys(r.updates).length>0){['children','pets','interests','notes'].forEach(function(k){if(r.updates[k]&&p[k])r.updates[k]=p[k]+', '+r.updates[k]});Object.assign(p,r.updates);saveP();addLog(p.id,r.summary);showToast(r.summary);render()}
+    if(r.linkedProfiles&&r.linkedProfiles.length>0){r.linkedProfiles.forEach(function(lp){
+      var result=createBidirectionalLink(p.id,lp.name,lp.label);
+      if(result){undoLinks.push({sourceId:p.id,targetId:result.target.id,label:lp.label,reverseLabel:result.reverseLabel});if(result.wasNew)undoProfiles.push(result.target.id)}
+      addLog(p.id,'Linked to '+lp.name+' ('+lp.label+')',{linksAdded:[{sourceId:p.id,targetId:result?result.target.id:null,label:lp.label,reverseLabel:result?result.reverseLabel:null}],profilesCreated:result&&result.wasNew?[result.target.id]:[],fieldChanges:{}})
+    })}
+    if(r.updates&&Object.keys(r.updates).length>0){
+      var prevFields={};Object.keys(r.updates).forEach(function(k){prevFields[k]=p[k]||''});
+      ['children','pets','interests','notes'].forEach(function(k){if(r.updates[k]&&p[k])r.updates[k]=p[k]+', '+r.updates[k]});
+      Object.assign(p,r.updates);saveP();
+      addLog(p.id,r.summary,{fieldChanges:prevFields,linksAdded:[],profilesCreated:[]});
+      showToast(r.summary);render()}
     else if(r.linkedProfiles&&r.linkedProfiles.length>0){showToast(r.summary);render()}
     return}
   if(!S.settings.apiKey){showToast('Add API key in Settings');return}
   showToast('Processing...');
   try{var raw=await callLLM(text,p.name,cur);var parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    var undoLinks2=[];var undoProfiles2=[];
     // Handle links from API
-    if(parsed.links&&parsed.links.length>0){parsed.links.forEach(function(lk){if(lk.name&&lk.label){createBidirectionalLink(p.id,lk.name,lk.label);addLog(p.id,'Linked to '+lk.name+' ('+lk.label+')')}})}
-    if((parsed.updates&&Object.keys(parsed.updates).length>0)||(parsed.links&&parsed.links.length>0)){if(parsed.updates)Object.assign(p,parsed.updates);saveP();addLog(p.id,parsed.summary||'Updated');showToast('Updated');genSummary(p.id);render()}else showToast('No updates detected')}catch(e){console.error(e);showToast(e.message||'Error')}
+    if(parsed.links&&parsed.links.length>0){parsed.links.forEach(function(lk){if(lk.name&&lk.label){
+      var result=createBidirectionalLink(p.id,lk.name,lk.label);
+      if(result){undoLinks2.push({sourceId:p.id,targetId:result.target.id,label:lk.label,reverseLabel:result.reverseLabel});if(result.wasNew)undoProfiles2.push(result.target.id)}
+      addLog(p.id,'Linked to '+lk.name+' ('+lk.label+')',{linksAdded:[{sourceId:p.id,targetId:result?result.target.id:null,label:lk.label,reverseLabel:result?result.reverseLabel:null}],profilesCreated:result&&result.wasNew?[result.target.id]:[],fieldChanges:{}})
+    }})}
+    if((parsed.updates&&Object.keys(parsed.updates).length>0)||(parsed.links&&parsed.links.length>0)){
+      var prevFields2={};if(parsed.updates)Object.keys(parsed.updates).forEach(function(k){prevFields2[k]=p[k]||''});
+      if(parsed.updates)Object.assign(p,parsed.updates);saveP();
+      addLog(p.id,parsed.summary||'Updated',{fieldChanges:prevFields2,linksAdded:undoLinks2,profilesCreated:undoProfiles2});
+      showToast('Updated');genSummary(p.id);render()}else showToast('No updates detected')}catch(e){console.error(e);showToast(e.message||'Error')}
 }
 async function genSummary(id){var p=S.profiles.find(function(x){return x.id===id});if(!p||S.settings.provider==='local'||!S.settings.apiKey)return;showToast('Generating summary...');var f={};FIELD_DEFS.forEach(function(d){if(p[d.key])f[d.label]=p[d.key]});var logs=S.logs.filter(function(l){return l.profileId===id}).slice(0,10).map(function(l){return l.text});try{var s=await callSummary(p.name,f,logs);if(s){p.summary=s;saveP();render()}}catch(e){console.error(e)}}
 
@@ -1165,7 +1247,9 @@ function renderProfile(){
   }else{
     var card3=h('div',{class:'fields-card'});
     if(!pL.length)card3.append(h('div',{style:{padding:'28px',textAlign:'center',color:'var(--text-muted)',fontSize:'13px',fontWeight:'300'}},'No activity yet'));
-    else pL.forEach(function(l,i){var it=h('div',{class:'log-item'});it.append(h('div',{class:'log-dot'+(i<3?' recent':'')}));var c3=h('div',{class:'log-content'});c3.append(h('div',{class:'log-text'},l.text),h('div',{class:'log-time'},timeAgo(l.timestamp)));it.append(c3);card3.append(it)});
+    else pL.forEach(function(l,i){var it=h('div',{class:'log-item'});it.append(h('div',{class:'log-dot'+(i<3?' recent':'')}));var c3=h('div',{class:'log-content'});c3.append(h('div',{class:'log-text'},l.text),h('div',{class:'log-time'},timeAgo(l.timestamp)));it.append(c3);
+      var delBtn=h('button',{class:'log-delete-btn',html:I.x,title:l.undoData?'Delete & undo changes':'Delete activity',onClick:function(e){e.stopPropagation();if(confirm(l.undoData?'Delete this activity and undo its changes?':'Delete this activity?'))deleteActivity(l.id)}});
+      it.append(delBtn);card3.append(it)});
     sc.append(card3);
   }
   app.append(sc);
@@ -1191,9 +1275,9 @@ function renderEdit(){
   var p=getActive();if(!p){S.view='list';render();return}
   var hdr=h('div',{class:'profile-header'});
   hdr.append(h('button',{class:'icon-btn',html:I.x,onClick:function(){S.view='profile';render()}}),h('div',{class:'profile-header-title'},'Edit Profile'),h('button',{class:'icon-btn accent',html:I.check,onClick:function(){
-    var ch=[];var ni=$('[data-field="name"]');if(ni&&ni.value!==p.name){p.name=ni.value;ch.push('Name')}
-    FIELD_DEFS.forEach(function(f){var el=$('[data-field="'+f.key+'"]');if(el){var nv=el.value;if(nv!==(p[f.key]||'')){p[f.key]=nv;ch.push(f.label)}}});
-    saveP();if(ch.length){addLog(p.id,'Updated: '+ch.join(', '));if(S.settings.provider==='local')generateLocalSummary(p.id);else genSummary(p.id)}
+    var ch=[];var prevFields={};var ni=$('[data-field="name"]');if(ni&&ni.value!==p.name){prevFields.name=p.name;p.name=ni.value;ch.push('Name')}
+    FIELD_DEFS.forEach(function(f){var el=$('[data-field="'+f.key+'"]');if(el){var nv=el.value;if(nv!==(p[f.key]||'')){prevFields[f.key]=p[f.key]||'';p[f.key]=nv;ch.push(f.label)}}});
+    saveP();if(ch.length){addLog(p.id,'Updated: '+ch.join(', '),{fieldChanges:prevFields,linksAdded:[],profilesCreated:[]});if(S.settings.provider==='local')generateLocalSummary(p.id);else genSummary(p.id)}
     S.view='profile';render();showToast('Saved')}}));
   app.append(hdr);
   var sc=h('div',{class:'scroll view-enter'});var w=h('div',{style:{padding:'24px'}});var card=h('div',{class:'fields-card',style:{margin:'0'}});
