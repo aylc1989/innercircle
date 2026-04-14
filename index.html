@@ -1250,7 +1250,32 @@ function importData(){var i=document.createElement('input');i.type='file';i.acce
 function backupToDrive(){var d={profiles:S.profiles,logs:S.logs,exportedAt:new Date().toISOString()};var b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});var f=new File([b],'inner-circle-'+new Date().toISOString().split('T')[0]+'.json',{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],title:'Inner Circle Backup'}).then(function(){showToast('Shared')}).catch(function(){exportData()});else{exportData();window.open('https://drive.google.com/drive/my-drive','_blank');showToast('File downloaded \u2014 upload to Drive')}}
 
 load();render();
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+if('serviceWorker' in navigator){
+  var refreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){
+    if(refreshing)return;
+    refreshing=true;
+    window.location.reload();
+  });
+  navigator.serviceWorker.register('sw.js').then(function(reg){
+    // Check for updates every 30 minutes
+    setInterval(function(){reg.update()},1800000);
+    // Also check on visibility change (user returns to app)
+    document.addEventListener('visibilitychange',function(){
+      if(!document.hidden)reg.update();
+    });
+    reg.addEventListener('updatefound',function(){
+      var newWorker=reg.installing;
+      if(!newWorker)return;
+      newWorker.addEventListener('statechange',function(){
+        if(newWorker.state==='installed'&&navigator.serviceWorker.controller){
+          // New version ready — tell it to activate immediately
+          newWorker.postMessage({type:'SKIP_WAITING'});
+        }
+      });
+    });
+  }).catch(function(){});
+}
 </script>
 </body>
 </html>

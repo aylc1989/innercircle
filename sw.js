@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inner-circle-v2';
+const CACHE_NAME = 'inner-circle-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -24,24 +24,50 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   // Don't cache API calls
-  if (e.request.url.includes('api.anthropic.com')) {
+  if (e.request.url.includes('api.anthropic.com') ||
+      e.request.url.includes('generativelanguage.googleapis.com') ||
+      e.request.url.includes('api.openai.com') ||
+      e.request.url.includes('api.perplexity.ai')) {
     return;
   }
+
+  // Network-first for HTML navigation — always get fresh content
+  if (e.request.mode === 'navigate' || e.request.destination === 'document') {
+    e.respondWith(
+      fetch(e.request).then((response) => {
+        if (response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+        }
+        return response;
+      }).catch(() => {
+        return caches.match(e.request).then((cached) => cached || caches.match('/index.html'));
+      })
+    );
+    return;
+  }
+
+  // Cache-first for other assets (icons, fonts, manifest)
   e.respondWith(
     caches.match(e.request).then((cached) => {
       return cached || fetch(e.request).then((response) => {
-        // Cache successful GET requests
         if (e.request.method === 'GET' && response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
         }
         return response;
       }).catch(() => {
-        // Offline fallback
         if (e.request.mode === 'navigate') {
           return caches.match('/index.html');
         }
       });
     })
   );
+});
+
+// Listen for skip waiting message from the page
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
