@@ -822,8 +822,27 @@ svg { display: block; }
   color: var(--text-muted); flex-shrink: 0; opacity: 0; transition: all 0.2s var(--ease-out);
 }
 .conn-card:hover .conn-remove { opacity: 1; }
+@media (hover: none) { .conn-remove { opacity: 0.6; } }
 .conn-remove:hover { color: var(--red); background: var(--red-soft); }
 .conn-remove svg { width: 12px; height: 12px; }
+.conn-edit {
+  width: 24px; height: 24px; border-radius: 50%; border: none; background: transparent;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  color: var(--text-muted); flex-shrink: 0; opacity: 0; transition: all 0.2s var(--ease-out);
+}
+.conn-card:hover .conn-edit { opacity: 1; }
+@media (hover: none) { .conn-edit { opacity: 0.6; } }
+.conn-edit:hover { color: var(--accent); background: var(--accent-soft); }
+.conn-edit svg { width: 12px; height: 12px; }
+.conn-label-edit {
+  position: relative; display: flex; align-items: center; gap: 6px;
+  padding: 4px 0;
+}
+.conn-label-select {
+  padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); font-size: 11px; font-family: var(--font-body);
+  color: var(--text-secondary); appearance: auto; cursor: pointer;
+}
 .conn-add-card {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 12px 14px; background: var(--bg-warm); border: 1px dashed var(--border-accent);
@@ -1457,6 +1476,15 @@ function renderProfile(){
         ci.append(h('div',{class:'mutual-badge'},mutuals.length+' mutual \u00B7 '+mutText));
       }
       clickArea.append(ci);card4.append(clickArea);
+      var editBtn=h('button',{class:'conn-edit',html:I.edit,title:'Edit relationship',onClick:function(e){e.stopPropagation();
+        // Replace the label with a dropdown
+        var relEl=ci.querySelector('.conn-rel');if(!relEl||relEl.tagName==='SELECT')return;
+        var sel=h('select',{class:'conn-label-select',onClick:function(ev){ev.stopPropagation()},onChange:function(ev){ev.stopPropagation();updateLinkLabel(p.id,lk.targetId,sel.value);render()}});
+        CONN_LABELS.forEach(function(lb){var opt=h('option',{value:lb},lb);if(lb===lk.label)opt.selected=true;sel.append(opt)});
+        if(CONN_LABELS.indexOf(lk.label)<0){sel.prepend(h('option',{value:lk.label,selected:true},lk.label))}
+        relEl.replaceWith(sel);sel.focus();
+      }});
+      card4.append(editBtn);
       var rmBtn=h('button',{class:'conn-remove',html:I.x,title:'Remove connection',onClick:function(e){e.stopPropagation();if(confirm('Remove connection to '+lk.targetName+'?'))removeConnection(p.id,lk.targetId)}});
       card4.append(rmBtn);
       grid.append(card4);
