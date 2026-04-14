@@ -1,8 +1,8 @@
-const CACHE_NAME = 'inner-circle-v3';
+const CACHE_NAME = 'inner-circle-v4';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  './',
+  './index.html',
+  './manifest.json',
   'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=Instrument+Serif:ital@0;1&display=swap'
 ];
 
@@ -41,7 +41,7 @@ self.addEventListener('fetch', (e) => {
         }
         return response;
       }).catch(() => {
-        return caches.match(e.request).then((cached) => cached || caches.match('/index.html'));
+        return caches.match(e.request).then((cached) => cached || caches.match('./index.html'));
       })
     );
     return;
@@ -58,7 +58,7 @@ self.addEventListener('fetch', (e) => {
         return response;
       }).catch(() => {
         if (e.request.mode === 'navigate') {
-          return caches.match('/index.html');
+          return caches.match('./index.html');
         }
       });
     })
