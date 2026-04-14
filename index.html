@@ -937,6 +937,25 @@ function getProfileLinks(profileId){
   });
 }
 
+// Silently rebuild summary text without logging, toasting, or re-rendering
+function rebuildSummary(p){
+  var parts=[];
+  if(p.relationship)parts.push(p.name+' is your '+p.relationship.toLowerCase()+'.');
+  if(p.job&&p.company)parts.push((p.relationship?'They work':'Works')+' as a '+p.job+' at '+p.company+'.');
+  else if(p.job)parts.push((p.relationship?'They work':'Works')+' as a '+p.job+'.');
+  else if(p.company)parts.push((p.relationship?'They work':'Works')+' at '+p.company+'.');
+  if(p.address)parts.push('Based in '+p.address+'.');
+  if(p.partner)parts.push('Partner: '+p.partner+'.');
+  if(p.children)parts.push('Children: '+p.children+'.');
+  if(p.pets)parts.push('Pets: '+p.pets+'.');
+  if(p.birthday){var age=Math.floor((Date.now()-new Date(p.birthday+'T00:00:00'))/(365.25*24*60*60*1e3));if(age>0&&age<120)parts.push('Age '+age+'.');else parts.push('Birthday: '+fmtDate(p.birthday)+'.')}
+  if(p.interests)parts.push('Enjoys '+p.interests+'.');
+  var links=getProfileLinks(p.id);
+  if(links.length>0)parts.push('Connected to '+links.map(function(l){return l.targetName+' ('+l.label+')'}).join(', ')+'.');
+  p.summary=parts.length>0?parts.join(' '):'';
+  saveP();
+}
+
 // === ACTIVITY DELETION WITH UNDO ===
 function deleteActivity(logId){
   var log=S.logs.find(function(l){return l.id===logId});if(!log)return;
@@ -967,13 +986,14 @@ function deleteActivity(logId){
   // Remove the log entry itself
   S.logs=S.logs.filter(function(l){return l.id!==logId});
   saveL();
-  // Regenerate summary if profile still exists
+  // Silently regenerate summary if profile still exists
   if(p){
     var hasData=FIELD_DEFS.some(function(f){return p[f.key]})||getProfileLinks(p.id).length>0;
-    if(hasData&&S.settings.provider==='local'){p.summary='';saveP();generateLocalSummary(p.id)}
-    else if(!hasData){p.summary='';saveP()}
+    if(hasData){rebuildSummary(p)}
+    else{p.summary='';saveP()}
   }
-  showToast('Activity deleted & changes undone');render();
+  showToast('Activity deleted & changes undone');
+  render();
 }
 
 // === LOCAL NLP (comprehensive) ===
