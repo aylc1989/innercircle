@@ -853,8 +853,27 @@ svg { display: block; }
   color: var(--text-muted); flex-shrink: 0; opacity: 0; transition: all 0.2s var(--ease-out);
 }
 .conn-card:hover .conn-remove { opacity: 1; }
+@media (hover: none) { .conn-remove { opacity: 0.6; } }
 .conn-remove:hover { color: var(--red); background: var(--red-soft); }
 .conn-remove svg { width: 12px; height: 12px; }
+.conn-edit {
+  width: 24px; height: 24px; border-radius: 50%; border: none; background: transparent;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  color: var(--text-muted); flex-shrink: 0; opacity: 0; transition: all 0.2s var(--ease-out);
+}
+.conn-card:hover .conn-edit { opacity: 1; }
+@media (hover: none) { .conn-edit { opacity: 0.6; } }
+.conn-edit:hover { color: var(--accent); background: var(--accent-soft); }
+.conn-edit svg { width: 12px; height: 12px; }
+.conn-label-edit {
+  position: relative; display: flex; align-items: center; gap: 6px;
+  padding: 4px 0;
+}
+.conn-label-select {
+  padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); font-size: 11px; font-family: var(--font-body);
+  color: var(--text-secondary); appearance: auto; cursor: pointer;
+}
 .conn-add-card {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 12px 14px; background: var(--bg-warm); border: 1px dashed var(--border-accent);
@@ -887,6 +906,63 @@ svg { display: block; }
   background: var(--surface); color: var(--text); outline: none; margin-bottom: 10px;
 }
 .conn-modal-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.edit-conn-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-light);
+}
+.edit-conn-row:last-child { border-bottom: none; }
+.edit-conn-name {
+  font-size: 13px; font-weight: 500; color: var(--text);
+  flex-shrink: 1; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.edit-conn-select {
+  flex: 0 0 auto; width: 110px;
+  padding: 6px 10px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--bg-warm);
+  font-size: 12px; font-family: var(--font-body); color: var(--text-secondary);
+  appearance: auto; cursor: pointer;
+}
+.edit-conn-remove {
+  width: 28px; height: 28px; border: none; background: none;
+  color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; flex-shrink: 0;
+  transition: all 0.2s var(--ease-out);
+}
+.edit-conn-remove:hover { color: var(--red); background: var(--red-soft); }
+.edit-conn-remove:active { transform: scale(0.9); }
+.edit-conn-add {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 14px 18px;
+  background: none; border: none; border-top: 1px solid var(--border-light);
+  color: var(--accent); font-size: 13px; font-family: var(--font-body);
+  font-weight: 500; cursor: pointer; width: 100%;
+  transition: background 0.2s;
+}
+.edit-conn-add:active { background: var(--accent-soft); }
+.add-conn-picker {
+  padding: 14px 18px; display: flex; flex-direction: column; gap: 10px;
+  border-top: 1px solid var(--border-light); background: var(--bg-warm);
+}
+.add-conn-picker select {
+  padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface);
+  font-size: 13px; font-family: var(--font-body); color: var(--text); width: 100%;
+}
+.add-conn-actions { display: flex; gap: 8px; margin-top: 2px; }
+.add-conn-actions button {
+  flex: 1; padding: 10px; border-radius: var(--radius-sm);
+  font-size: 13px; font-family: var(--font-body); font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-secondary); transition: all 0.2s;
+}
+.add-conn-actions button:active { transform: scale(0.97); }
+.add-conn-confirm {
+  background: var(--accent) !important; color: white !important;
+  border-color: var(--accent) !important;
+}
 </style>
 </head>
 <body>
@@ -1204,6 +1280,30 @@ function deleteActivity(logId){
   render();
 }
 
+var CONN_LABELS=['Father','Mother','Brother','Sister','Son','Daughter','Husband','Wife','Spouse','Partner','Friend','Best Friend','Colleague','Boss','Manager','Uncle','Aunt','Cousin','Grandfather','Grandmother','Nephew','Niece','Boyfriend','Girlfriend'];
+var SPOUSE_LABELS=/^(husband|wife|spouse|partner|boyfriend|girlfriend)$/i;
+function removeLink(fromId,toId){
+  var from=S.profiles.find(function(p){return p.id===fromId});
+  var to=S.profiles.find(function(p){return p.id===toId});
+  // Clear partner fields if removing a spouse-type link
+  if(from&&from.links){var oldLk=from.links.find(function(l){return l.targetId===toId});if(oldLk&&SPOUSE_LABELS.test(oldLk.label)&&to&&from.partner&&from.partner.toLowerCase()===to.name.toLowerCase())from.partner=''}
+  if(to&&to.links){var oldRl=to.links.find(function(l){return l.targetId===fromId});if(oldRl&&SPOUSE_LABELS.test(oldRl.label)&&from&&to.partner&&to.partner.toLowerCase()===from.name.toLowerCase())to.partner=''}
+  if(from&&from.links)from.links=from.links.filter(function(l){return l.targetId!==toId});
+  if(to&&to.links)to.links=to.links.filter(function(l){return l.targetId!==fromId});
+  saveP();
+}
+function updateLinkLabel(fromId,toId,newLabel){
+  var from=S.profiles.find(function(p){return p.id===fromId});
+  var to=S.profiles.find(function(p){return p.id===toId});
+  if(from&&from.links){var lk=from.links.find(function(l){return l.targetId===toId});if(lk)lk.label=newLabel}
+  var rev=REVERSE_REL[newLabel.toLowerCase()]||'Connected';
+  if(to&&to.links){var rl=to.links.find(function(l){return l.targetId===fromId});if(rl)rl.label=rev}
+  // Sync partner fields for spouse-type labels
+  if(SPOUSE_LABELS.test(newLabel)){if(from&&to)from.partner=to.name;if(to&&from)to.partner=from.name}
+  else{if(from&&to&&from.partner&&from.partner.toLowerCase()===to.name.toLowerCase())from.partner='';if(to&&from&&to.partner&&to.partner.toLowerCase()===from.name.toLowerCase())to.partner=''}
+  saveP();
+}
+
 // === LOCAL NLP (comprehensive) ===
 var JOBS='engineer|designer|developer|manager|director|analyst|teacher|doctor|nurse|lawyer|accountant|consultant|therapist|chef|writer|scientist|professor|architect|artist|musician|photographer|editor|producer|officer|specialist|coordinator|student|intern|programmer|plumber|electrician|mechanic|pilot|dentist|pharmacist|surgeon|psychologist|veterinarian|librarian|journalist|realtor|agent|broker|trainer|coach|tutor|carpenter|painter|cashier|receptionist|driver|waiter|waitress|bartender|baker|welder|firefighter|paramedic|technician|clerk|secretary|assistant|associate|executive|president|ceo|cfo|cto|vp|founder|entrepreneur|freelancer|contractor|researcher|lecturer|instructor|counselor|advisor|strategist|recruiter|salesperson|marketer|auditor|actuary|paralegal|attorney|solicitor';
 var RELS='wife|husband|partner|girlfriend|boyfriend|fianc[eé]+|sister|brother|mom|mother|dad|father|daughter|son|aunt|uncle|cousin|grandma|grandmother|grandpa|grandfather|niece|nephew|friend|best friend|colleague|coworker|co-worker|boss|manager|neighbor|neighbour|roommate|mentor|mentee|ex|step-?mother|step-?father|step-?sister|step-?brother|in-law|mother-in-law|father-in-law|sister-in-law|brother-in-law';
@@ -1225,12 +1325,12 @@ function localParse(text,name){
     var pt=parts[pi],ptl=pt.toLowerCase();
     // Cross-profile links: "her father is Gary Foster", "her father's name is Julie Foster"
     var cx1=pt.match(new RegExp("(?:her|his|their)\\s+("+LINK_RELS+")(?:'s\\s+name)?\\s+is\\s+(.+?)(?:\\s+and\\s+|$)","i"));
-    if(cx1){linkedProfiles.push({name:clean(cx1[2]),label:cap(cx1[1])});m.push(cap(cx1[1])+': '+clean(cx1[2]));continue}
+    if(cx1){var cxLabel=cap(cx1[1]),cxName=clean(cx1[2]);linkedProfiles.push({name:cxName,label:cxLabel});m.push(cxLabel+': '+cxName);if(/^(husband|wife|spouse|partner)$/i.test(cxLabel)&&!up.partner){up.partner=cxName}continue}
     var cx2=pt.match(new RegExp("(.+?)(?:'s|s')\\s+("+LINK_RELS+")(?:'s\\s+name)?\\s+is\\s+(.+?)(?:\\s+and\\s+|$)","i"));
-    if(!cx1&&cx2){linkedProfiles.push({name:clean(cx2[3]),label:cap(cx2[2])});m.push(cap(cx2[2])+': '+clean(cx2[3]));continue}
+    if(!cx1&&cx2){var cx2Label=cap(cx2[2]),cx2Name=clean(cx2[3]);linkedProfiles.push({name:cx2Name,label:cx2Label});m.push(cx2Label+': '+cx2Name);if(/^(husband|wife|spouse|partner)$/i.test(cx2Label)&&!up.partner){up.partner=cx2Name}continue}
     // Cross-profile links: "her father is named Julie Foster"
     var cx3=pt.match(new RegExp("(?:her|his|their)\\s+("+LINK_RELS+")\\s+is\\s+named\\s+(.+?)(?:\\s+and\\s+|$)","i"));
-    if(cx3){linkedProfiles.push({name:clean(cx3[2]),label:cap(cx3[1])});m.push(cap(cx3[1])+': '+clean(cx3[2]));continue}
+    if(cx3){var cx3Label=cap(cx3[1]),cx3Name=clean(cx3[2]);linkedProfiles.push({name:cx3Name,label:cx3Label});m.push(cx3Label+': '+cx3Name);if(/^(husband|wife|spouse|partner)$/i.test(cx3Label)&&!up.partner){up.partner=cx3Name}continue}
     // Relationship to user
     var rm=ptl.match(new RegExp("(?:she|he|they|this)?\\s*(?:is|are|'s)\\s+my\\s+("+RELS+")","i"))||ptl.match(new RegExp("^(?:my|that'?s my|this is my)\\s+("+RELS+")","i"))||ptl.match(/we(?:'re|\s+are)\s+(married|engaged|dating|friends|coworkers|colleagues|roommates|neighbors)/i);
     if(rm&&!up.relationship){var rv=clean(rm[1]);if(rv==='married')rv='Spouse';else if(rv==='engaged')rv='Fiancé(e)';else if(rv==='dating')rv='Partner';else if(rv==='friends')rv='Friend';up.relationship=cap(rv);m.push('Relationship: '+up.relationship);continue}
@@ -1506,6 +1606,15 @@ function renderProfile(){
         ci.append(h('div',{class:'mutual-badge'},mutuals.length+' mutual \u00B7 '+mutText));
       }
       clickArea.append(ci);card4.append(clickArea);
+      var editBtn=h('button',{class:'conn-edit',html:I.edit,title:'Edit relationship',onClick:function(e){e.stopPropagation();
+        // Replace the label with a dropdown
+        var relEl=ci.querySelector('.conn-rel');if(!relEl||relEl.tagName==='SELECT')return;
+        var sel=h('select',{class:'conn-label-select',onClick:function(ev){ev.stopPropagation()},onChange:function(ev){ev.stopPropagation();updateLinkLabel(p.id,lk.targetId,sel.value);render()}});
+        CONN_LABELS.forEach(function(lb){var opt=h('option',{value:lb},lb);if(lb===lk.label)opt.selected=true;sel.append(opt)});
+        if(CONN_LABELS.indexOf(lk.label)<0){sel.prepend(h('option',{value:lk.label,selected:true},lk.label))}
+        relEl.replaceWith(sel);sel.focus();
+      }});
+      card4.append(editBtn);
       var rmBtn=h('button',{class:'conn-remove',html:I.x,title:'Remove connection',onClick:function(e){e.stopPropagation();if(confirm('Remove connection to '+lk.targetName+'?'))removeConnection(p.id,lk.targetId)}});
       card4.append(rmBtn);
       grid.append(card4);
@@ -1547,11 +1656,20 @@ function renderEdit(){
   var p=getActive();if(!p){S.view='list';render();return}
   var hdr=h('div',{class:'profile-header'});
   hdr.append(h('button',{class:'icon-btn',html:I.x,onClick:function(){S.view='profile';render()}}),h('div',{class:'profile-header-title'},'Edit Profile'),h('button',{class:'icon-btn accent',html:I.check,onClick:function(){
-    var ch=[];var prevFields={};var ni=$('[data-field="name"]');if(ni&&ni.value!==p.name){prevFields.name=p.name;p.name=ni.value;ch.push('Name')}
+    var ch=[];var prevFields={};var ni=$('[data-field="name"]');var oldName=p.name;if(ni&&ni.value!==p.name){prevFields.name=p.name;p.name=ni.value;ch.push('Name');
+      // Propagate name change to all links and partner fields across profiles
+      S.profiles.forEach(function(op){
+        if(op.links){op.links.forEach(function(lk){if(lk.targetId===p.id)lk.targetName=p.name})}
+        if(op.partner&&op.partner.toLowerCase()===oldName.toLowerCase())op.partner=p.name;
+      });
+    }
     FIELD_DEFS.forEach(function(f){var el=$('[data-field="'+f.key+'"]');if(el){var nv=el.value;if(nv&&TITLE_CASE_FIELDS[f.key])nv=titleCase(nv);if(nv!==(p[f.key]||'')){prevFields[f.key]=p[f.key]||'';p[f.key]=nv;ch.push(f.label)}}});
     // Sync partner field with spouse/partner connections
     if(prevFields.partner!==undefined){syncPartnerToConnection(p)}
-    saveP();if(ch.length){addLog(p.id,'Updated: '+ch.join(', '),{fieldChanges:prevFields,linksAdded:[],profilesCreated:[]});if(S.settings.provider==='local')generateLocalSummary(p.id);else genSummary(p.id)}
+    saveP();if(ch.length){addLog(p.id,'Updated: '+ch.join(', '),{fieldChanges:prevFields,linksAdded:[],profilesCreated:[]});if(S.settings.provider==='local')generateLocalSummary(p.id);else genSummary(p.id);
+      // Regenerate summaries for profiles that link to this one
+      if(ch.indexOf('Name')>=0){S.profiles.forEach(function(op){if(op.id!==p.id&&op.links&&op.links.some(function(lk){return lk.targetId===p.id})){if(S.settings.provider==='local')generateLocalSummary(op.id);else genSummary(op.id)}})}
+    }
     S.view='profile';render();showToast('Saved')}}));
   app.append(hdr);
   var sc=h('div',{class:'scroll view-enter'});var w=h('div',{style:{padding:'24px'}});var card=h('div',{class:'fields-card',style:{margin:'0'}});
@@ -1559,7 +1677,57 @@ function renderEdit(){
   FIELD_DEFS.forEach(function(f){var ef=h('div',{class:'edit-field'});ef.append(h('div',{class:'edit-label'},f.icon+' '+f.label));
     if(f.type==='textarea')ef.append(h('textarea',{class:'edit-input edit-textarea','data-field':f.key,placeholder:f.placeholder||''},p[f.key]||''));
     else ef.append(h('input',{class:'edit-input',type:f.type,'data-field':f.key,value:p[f.key]||'',placeholder:f.placeholder||''}));card.append(ef)});
-  w.append(card);sc.append(w);app.append(sc);
+  w.append(card);
+  // Connections editor
+  var links=getProfileLinks(p.id);
+  w.append(h('div',{class:'section-title',style:{marginTop:'20px'}},'Connections'));
+  var connCard=h('div',{class:'fields-card',style:{margin:'0'}});
+  var connWrap=h('div');
+  links.forEach(function(lk){
+    var row=h('div',{class:'edit-conn-row'});
+    row.append(h('div',{class:'conn-avatar',style:{background:getColor(lk.targetName),width:'28px',height:'28px',fontSize:'10px'}},initials(lk.targetName)));
+    row.append(h('div',{class:'edit-conn-name'},lk.targetName));
+    var sel=h('select',{class:'edit-conn-select',onChange:function(){updateLinkLabel(p.id,lk.targetId,sel.value);render()}});
+    CONN_LABELS.forEach(function(lb){var opt=h('option',{value:lb},lb);if(lb===lk.label)opt.selected=true;sel.append(opt)});
+    if(CONN_LABELS.indexOf(lk.label)<0){var custom=h('option',{value:lk.label,selected:true},lk.label);sel.prepend(custom)}
+    row.append(sel);
+    row.append(h('button',{class:'edit-conn-remove',html:'&times;',onClick:function(){removeLink(p.id,lk.targetId);render()}}));
+    connWrap.append(row);
+  });
+  var addBtn=h('button',{class:'edit-conn-add',onClick:function(){
+    if(connWrap.querySelector('.add-conn-picker'))return;
+    var picker=h('div',{class:'add-conn-picker'});
+    var linkedIds=links.map(function(l){return l.targetId});
+    var available=S.profiles.filter(function(op){return op.id!==p.id&&linkedIds.indexOf(op.id)<0});
+    if(!available.length){showToast('No other contacts to link');return}
+    var pSel=h('select',{class:'edit-conn-select'});
+    pSel.append(h('option',{value:'',disabled:true,selected:true},'Choose a person\u2026'));
+    available.forEach(function(op){pSel.append(h('option',{value:op.id},op.name))});
+    var lSel=h('select',{class:'edit-conn-select'});
+    lSel.append(h('option',{value:'',disabled:true,selected:true},'Relationship\u2026'));
+    CONN_LABELS.forEach(function(lb){lSel.append(h('option',{value:lb},lb))});
+    picker.append(pSel,lSel);
+    var acts=h('div',{class:'add-conn-actions'});
+    acts.append(h('button',{onClick:function(){picker.remove()}},'Cancel'));
+    acts.append(h('button',{class:'add-conn-confirm',onClick:function(){
+      var tid=pSel.value,lab=lSel.value;
+      if(!tid||!lab){showToast('Pick a person and relationship');return}
+      var target=S.profiles.find(function(x){return x.id===tid});
+      if(!target)return;
+      addLink(p.id,target.id,target.name,lab);
+      var rev=REVERSE_REL[lab.toLowerCase()]||'Connected';
+      addLink(target.id,p.id,p.name,rev);
+      if(SPOUSE_LABELS.test(lab)){p.partner=target.name;target.partner=p.name;saveP()}
+      addLog(p.id,'Linked to '+target.name+' ('+lab+')');
+      render();showToast('Connected to '+target.name);
+    }},'Add'));
+    picker.append(acts);
+    connWrap.append(picker);
+  }},'+  Add Connection');
+  connWrap.append(addBtn);
+  connCard.append(connWrap);
+  w.append(connCard);
+  sc.append(w);app.append(sc);
 }
 
 function renderSettings(){
