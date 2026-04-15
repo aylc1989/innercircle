@@ -198,6 +198,37 @@ html, body {
   box-shadow: var(--shadow-inner), 0 0 0 3px var(--accent-glow);
 }
 
+/* ─── Birthday banner ─── */
+.bday-banner {
+  margin: 0 16px 14px;
+  background: linear-gradient(135deg, var(--accent-soft) 0%, var(--surface) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  box-shadow: var(--shadow-xs);
+}
+.bday-banner-title {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--accent); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.bday-banner-list { display: flex; flex-direction: column; gap: 8px; }
+.bday-item {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  padding: 6px 8px; border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+.bday-item:hover { background: rgba(184,135,76,0.08); }
+.bday-item-info { flex: 1; min-width: 0; }
+.bday-item-name { font-size: 13px; font-weight: 500; }
+.bday-item-date { font-size: 11px; color: var(--text-tertiary); font-weight: 400; }
+.bday-item-badge {
+  font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 10px; flex-shrink: 0;
+}
+.bday-today { background: var(--accent); color: white; }
+.bday-soon { background: var(--accent-soft); color: var(--accent); }
+
 /* ─── Contact list ─── */
 .contact-list { padding: 0 16px 24px; }
 .contact-item {
@@ -987,9 +1018,37 @@ const timeAgo=d=>{const s=Math.floor((Date.now()-new Date(d))/1e3);if(s<60)retur
 const initials=n=>n?n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2):'?';
 const getColor=n=>{let v=0;for(let i=0;i<(n||'').length;i++)v=n.charCodeAt(i)+((v<<5)-v);return AVATAR_COLORS[Math.abs(v)%AVATAR_COLORS.length]};
 const getSubtitle=p=>{if(p.job&&p.company)return p.job+' at '+p.company;return p.job||p.company||p.address||''};
+function getUpcomingBirthdays(days){
+  var now=new Date();var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  var results=[];
+  S.profiles.forEach(function(p){
+    if(!p.birthday)return;
+    var bd=new Date(p.birthday+'T00:00:00');
+    var thisYear=new Date(today.getFullYear(),bd.getMonth(),bd.getDate());
+    var nextYear=new Date(today.getFullYear()+1,bd.getMonth(),bd.getDate());
+    var diff=Math.floor((thisYear-today)/(24*60*60*1e3));
+    if(diff<0)diff=Math.floor((nextYear-today)/(24*60*60*1e3));
+    if(diff>=0&&diff<=days){
+      var age=today.getFullYear()-bd.getFullYear();if(diff>0||today.getMonth()>bd.getMonth()||(today.getMonth()===bd.getMonth()&&today.getDate()>=bd.getDate())){}else{age--}
+      results.push({profile:p,daysUntil:diff,age:age,dateStr:fmtDate(p.birthday)});
+    }
+  });
+  results.sort(function(a,b){return a.daysUntil-b.daysUntil});
+  return results;
+}
 
 let S={profiles:[],logs:[],view:'list',activeId:null,search:'',profileTab:'details',settings:{provider:'local',apiKey:'',model:''}};
-function load(){try{S.profiles=JSON.parse(localStorage.getItem(PROFILES_KEY)||'[]')}catch{S.profiles=[]}try{S.logs=JSON.parse(localStorage.getItem(LOGS_KEY)||'[]')}catch{S.logs=[]}try{Object.assign(S.settings,JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'))}catch{}}
+function load(){try{S.profiles=JSON.parse(localStorage.getItem(PROFILES_KEY)||'[]')}catch{S.profiles=[]}try{S.logs=JSON.parse(localStorage.getItem(LOGS_KEY)||'[]')}catch{S.logs=[]}try{Object.assign(S.settings,JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'))}catch{}
+  // Backfill partner field from existing spouse/partner connections
+  var changed=false;
+  S.profiles.forEach(function(p){
+    if(p.partner)return;
+    if(!p.links)return;
+    var pl=p.links.find(function(l){return isPartnerLabel(l.label)&&S.profiles.some(function(x){return x.id===l.targetId})});
+    if(pl){p.partner=pl.targetName;changed=true}
+  });
+  if(changed)saveP();
+}
 function saveP(){localStorage.setItem(PROFILES_KEY,JSON.stringify(S.profiles))}
 function saveL(){localStorage.setItem(LOGS_KEY,JSON.stringify(S.logs))}
 function saveS(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(S.settings))}
@@ -1014,6 +1073,9 @@ var REVERSE_REL={
   'sister-in-law':'Sibling-in-law','brother-in-law':'Sibling-in-law',
   'partner':'Partner','girlfriend':'Partner','boyfriend':'Partner'
 };
+
+var PARTNER_LABELS={'wife':1,'husband':1,'spouse':1,'partner':1,'girlfriend':1,'boyfriend':1,'fiancé':1,'fiancée':1,'fiance':1,'fiancee':1};
+function isPartnerLabel(label){return PARTNER_LABELS[label.toLowerCase()]||false}
 
 function findProfileByName(name){
   var nl=name.toLowerCase().trim();
@@ -1044,6 +1106,12 @@ function createBidirectionalLink(sourceId,targetName,relLabel){
   addLink(sourceId,target.id,target.name,relLabel);
   var rev=REVERSE_REL[relLabel.toLowerCase()]||'Connected';
   addLink(target.id,sourceId,source.name,rev);
+  // Auto-sync partner field for spouse/partner relationships
+  if(isPartnerLabel(relLabel)){
+    source.partner=target.name;
+    target.partner=source.name;
+    saveP();
+  }
   return{target:target,wasNew:wasNew,reverseLabel:rev};
 }
 function getProfileLinks(profileId){
@@ -1061,11 +1129,49 @@ function getMutualConnections(idA,idB){
 function removeConnection(sourceId,targetId){
   var src=S.profiles.find(function(x){return x.id===sourceId});
   var tgt=S.profiles.find(function(x){return x.id===targetId});
+  // Check if this was a partner link before removing
+  var wasPartner=false;
+  if(src&&src.links){var lnk=src.links.find(function(l){return l.targetId===targetId});if(lnk&&isPartnerLabel(lnk.label))wasPartner=true}
   if(src&&src.links)src.links=src.links.filter(function(l){return l.targetId!==targetId});
   if(tgt&&tgt.links)tgt.links=tgt.links.filter(function(l){return l.targetId!==sourceId});
+  // Clear partner fields if it was a partner connection
+  if(wasPartner){
+    if(src&&src.partner&&tgt&&src.partner.toLowerCase()===tgt.name.toLowerCase()){src.partner=''}
+    if(tgt&&tgt.partner&&src&&tgt.partner.toLowerCase()===src.name.toLowerCase()){tgt.partner=''}
+  }
   saveP();
   addLog(sourceId,'Removed connection to '+(tgt?tgt.name:'unknown'));
   showToast('Connection removed');render();
+}
+function syncPartnerToConnection(profile){
+  // If partner field changed, update the matching spouse/partner connection
+  var links=getProfileLinks(profile.id);
+  var partnerLink=links.find(function(l){return isPartnerLabel(l.label)});
+  if(profile.partner&&profile.partner.trim()){
+    var newName=profile.partner.trim();
+    if(partnerLink){
+      // Update existing partner connection's name
+      var tgt=S.profiles.find(function(x){return x.id===partnerLink.targetId});
+      if(tgt&&tgt.name.toLowerCase()!==newName.toLowerCase()){
+        // Update the link target name
+        var lnk=profile.links.find(function(l){return l.targetId===partnerLink.targetId});
+        if(lnk)lnk.targetName=newName;
+        // Update the target profile's name and their reverse link
+        tgt.name=newName;
+        var revLnk=tgt.links?tgt.links.find(function(l){return l.targetId===profile.id}):null;
+        if(revLnk)revLnk.targetName=profile.name;
+        // Update target's partner field too
+        tgt.partner=profile.name;
+      }
+    } else {
+      // No partner connection exists, create one
+      createBidirectionalLink(profile.id,newName,'Partner');
+    }
+  } else if(partnerLink&&!profile.partner){
+    // Partner field cleared, remove the connection
+    removeConnection(profile.id,partnerLink.targetId);
+  }
+  saveP();
 }
 function showAddConnectionModal(profileId){
   var p=S.profiles.find(function(x){return x.id===profileId});if(!p)return;
@@ -1390,14 +1496,38 @@ function renderList(){
     mw.append(dd);setTimeout(function(){document.addEventListener('click',function c(){dd.remove();document.removeEventListener('click',c)})},10)}}));
   acts.append(mw,h('button',{class:'icon-btn primary',html:I.plus,onClick:showNewModal}));top.append(acts);hdr.append(top);
   var sw=h('div',{class:'search-wrap'});sw.innerHTML='<span class="search-icon">'+I.search+'</span>';
-  var si=h('input',{class:'search-input',placeholder:'Search your circle\u2026',value:S.search,onInput:function(e){S.search=e.target.value;renderItems(sc)}});
+  var si=h('input',{class:'search-input',placeholder:'Search name, job, company, location\u2026',value:S.search,onInput:function(e){S.search=e.target.value;renderItems(sc)}});
   sw.append(si);hdr.append(sw);app.append(hdr);
-  var sc=h('div',{class:'scroll'});renderItems(sc);app.append(sc);
+  var sc=h('div',{class:'scroll'});
+  // Upcoming birthdays banner
+  var bdays=getUpcomingBirthdays(14);
+  if(bdays.length>0){
+    var banner=h('div',{class:'bday-banner'});
+    var btitle=h('div',{class:'bday-banner-title'});btitle.innerHTML='\uD83C\uDF82 Upcoming Birthdays';
+    banner.append(btitle);
+    var blist=h('div',{class:'bday-banner-list'});
+    bdays.forEach(function(b){
+      var item=h('div',{class:'bday-item',onClick:function(){S.activeId=b.profile.id;S.view='profile';S.profileTab='details';render()}});
+      item.append(h('div',{class:'avatar',style:{background:getColor(b.profile.name),width:'32px',height:'32px',fontSize:'11px',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontFamily:'var(--font-display)',fontWeight:'500',flexShrink:'0'}},initials(b.profile.name)));
+      var info=h('div',{class:'bday-item-info'});
+      info.append(h('div',{class:'bday-item-name'},b.profile.name));
+      var dateLabel=new Date(b.profile.birthday+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      if(b.age>0)dateLabel+=' \u00B7 turning '+b.age;
+      info.append(h('div',{class:'bday-item-date'},dateLabel));
+      item.append(info);
+      var badge=h('div',{class:'bday-item-badge '+(b.daysUntil===0?'bday-today':'bday-soon')});
+      badge.textContent=b.daysUntil===0?'Today':b.daysUntil===1?'Tomorrow':'In '+b.daysUntil+'d';
+      item.append(badge);
+      blist.append(item);
+    });
+    banner.append(blist);sc.append(banner);
+  }
+  renderItems(sc);app.append(sc);
 }
 
 function renderItems(c){
   c.innerHTML='';var list=h('div',{class:'contact-list'});
-  var f=S.profiles.filter(function(p){return!S.search||p.name.toLowerCase().includes(S.search.toLowerCase())||(p.job||'').toLowerCase().includes(S.search.toLowerCase())||(p.relationship||'').toLowerCase().includes(S.search.toLowerCase())}).sort(function(a,b){return a.name.localeCompare(b.name)});
+  var f=S.profiles.filter(function(p){if(!S.search)return true;var q=S.search.toLowerCase();return p.name.toLowerCase().includes(q)||(p.job||'').toLowerCase().includes(q)||(p.company||'').toLowerCase().includes(q)||(p.relationship||'').toLowerCase().includes(q)||(p.address||'').toLowerCase().includes(q)||(p.interests||'').toLowerCase().includes(q)||(p.notes||'').toLowerCase().includes(q)}).sort(function(a,b){return a.name.localeCompare(b.name)});
   if(!f.length){
     var emptyDiv=h('div',{class:'empty-state'});
     var emptyIcon=h('div',{class:'empty-icon'});
@@ -1534,6 +1664,8 @@ function renderEdit(){
       });
     }
     FIELD_DEFS.forEach(function(f){var el=$('[data-field="'+f.key+'"]');if(el){var nv=el.value;if(nv&&TITLE_CASE_FIELDS[f.key])nv=titleCase(nv);if(nv!==(p[f.key]||'')){prevFields[f.key]=p[f.key]||'';p[f.key]=nv;ch.push(f.label)}}});
+    // Sync partner field with spouse/partner connections
+    if(prevFields.partner!==undefined){syncPartnerToConnection(p)}
     saveP();if(ch.length){addLog(p.id,'Updated: '+ch.join(', '),{fieldChanges:prevFields,linksAdded:[],profilesCreated:[]});if(S.settings.provider==='local')generateLocalSummary(p.id);else genSummary(p.id);
       // Regenerate summaries for profiles that link to this one
       if(ch.indexOf('Name')>=0){S.profiles.forEach(function(op){if(op.id!==p.id&&op.links&&op.links.some(function(lk){return lk.targetId===p.id})){if(S.settings.provider==='local')generateLocalSummary(op.id);else genSummary(op.id)}})}
