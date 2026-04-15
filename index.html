@@ -493,7 +493,7 @@ html, body {
 }
 .nlp-inner {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -516,6 +516,12 @@ html, body {
   background: transparent;
   color: var(--text);
   min-width: 0;
+  resize: none;
+  overflow-y: hidden;
+  line-height: 1.4;
+  max-height: 120px;
+  height: 36px;
+  padding: 8px 0;
 }
 .nlp-input::placeholder { color: var(--text-muted); font-weight: 300; }
 .nlp-btn {
@@ -1452,7 +1458,7 @@ async function callSummary(name,fields,logs){
   var d2=await r2.json();return d2.choices?.[0]?.message?.content?.trim()||'';
 }
 async function processNLP(text,inputEl){
-  var p=getActive();if(!p||!text.trim())return;if(inputEl)inputEl.value='';
+  var p=getActive();if(!p||!text.trim())return;if(inputEl){inputEl.value='';inputEl.style.height='36px';inputEl.style.overflowY='hidden'}
   var cur={};FIELD_DEFS.forEach(function(f){if(p[f.key])cur[f.key]=p[f.key]});
   if(S.settings.provider==='local'){var r=localParse(text,p.name);
     var undoLinks=[];var undoProfiles=[];
@@ -1491,6 +1497,24 @@ async function genSummary(id){var p=S.profiles.find(function(x){return x.id===id
 let tt;function showToast(msg){var t=$('.toast');if(t)t.remove();clearTimeout(tt);var el=h('div',{class:'toast'},msg);document.body.append(el);tt=setTimeout(function(){el.remove()},2500)}
 
 const app=document.getElementById('app');
+
+function autoResizeInput(el){
+  el.style.height='36px';
+  var sh=el.scrollHeight;
+  if(sh>36){el.style.height=Math.min(sh,120)+'px';el.style.overflowY=sh>120?'auto':'hidden'}
+}
+
+// Handle mobile keyboard resizing via visualViewport API
+if(window.visualViewport){
+  var vpHandler=function(){
+    var vv=window.visualViewport;
+    document.documentElement.style.height=vv.height+'px';
+    window.scrollTo(0,0);
+  };
+  window.visualViewport.addEventListener('resize',vpHandler);
+  window.visualViewport.addEventListener('scroll',function(){window.scrollTo(0,0)});
+}
+
 function render(){app.innerHTML='';if(S.view==='list')renderList();else if(S.view==='profile')renderProfile();else if(S.view==='edit')renderEdit();else if(S.view==='settings')renderSettings()}
 
 function renderList(){
@@ -1657,7 +1681,7 @@ function renderProfile(){
   app.append(sc);
   var bar=h('div',{class:'nlp-bar'});var inner=h('div',{class:'nlp-inner'});
   var prov=S.settings.provider==='local'?'Local':S.settings.provider==='anthropic'?'Claude':S.settings.provider==='gemini'?'Gemini':S.settings.provider==='openai'?'GPT':'Pplx';
-  var inp=h('input',{class:'nlp-input',placeholder:S.settings.provider==='local'?'\u201Cshe is my wife\u201D, \u201Cworks at Google\u201D\u2026':'Add details naturally\u2026',onKeydown:function(e){if(e.key==='Enter'&&inp.value.trim())processNLP(inp.value,inp)}});
+  var inp=h('textarea',{class:'nlp-input',rows:'1',placeholder:S.settings.provider==='local'?'\u201Cshe is my wife\u201D, \u201Cworks at Google\u201D\u2026':'Add details naturally\u2026',onKeydown:function(e){if(e.key==='Enter'&&!e.shiftKey&&inp.value.trim()){e.preventDefault();processNLP(inp.value,inp)}},onInput:function(){autoResizeInput(inp)}});
   var mic=h('button',{class:'nlp-btn nlp-mic'+(isRec?' recording':''),html:I.mic,onClick:function(){toggleRec(inp)}});
   var snd=h('button',{class:'nlp-btn nlp-send',html:I.send,onClick:function(){if(inp.value.trim())processNLP(inp.value,inp)}});
   inner.append(h('span',{class:'nlp-mode-tag'},prov),inp,mic,snd);bar.append(inner);app.append(bar);
@@ -1667,8 +1691,12 @@ var isRec=false,recog=null;
 function toggleRec(inp){
   if(isRec){recog?.stop();isRec=false;render();return}
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){showToast('Speech not supported');return}
-  recog=new SR();recog.continuous=false;recog.interimResults=false;recog.lang='en-US';
-  recog.onresult=function(e){processNLP(e.results[0][0].transcript)};
+  recog=new SR();recog.continuous=false;recog.interimResults=true;recog.lang='en-US';
+  recog.onresult=function(e){
+    var transcript=e.results[0][0].transcript;
+    if(e.results[0].isFinal){inp.value=transcript;autoResizeInput(inp);processNLP(transcript,inp)}
+    else{inp.value=transcript;autoResizeInput(inp)}
+  };
   recog.onerror=function(){isRec=false;render()};recog.onend=function(){isRec=false;render()};
   recog.start();isRec=true;render();
 }
