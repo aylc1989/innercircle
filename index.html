@@ -1043,9 +1043,19 @@ function load(){try{S.profiles=JSON.parse(localStorage.getItem(PROFILES_KEY)||'[
   var changed=false;
   S.profiles.forEach(function(p){
     if(p.partner)return;
-    if(!p.links)return;
-    var pl=p.links.find(function(l){return isPartnerLabel(l.label)&&S.profiles.some(function(x){return x.id===l.targetId})});
-    if(pl){p.partner=pl.targetName;changed=true}
+    // Check outgoing links (this person → partner)
+    if(p.links){
+      var pl=p.links.find(function(l){return isPartnerLabel(l.label)&&S.profiles.some(function(x){return x.id===l.targetId})});
+      if(pl){p.partner=pl.targetName;changed=true;return}
+    }
+    // Check incoming links (partner → this person)
+    var incoming=S.profiles.find(function(op){return op.links&&op.links.some(function(l){return l.targetId===p.id&&isPartnerLabel(l.label)})});
+    if(incoming){p.partner=incoming.name;changed=true;return}
+    // Check relationship field — if this person "is my wife/husband/etc", find who links to them
+    if(p.relationship&&isPartnerLabel(p.relationship)){
+      var linker=S.profiles.find(function(op){return op.links&&op.links.some(function(l){return l.targetId===p.id})});
+      if(linker){p.partner=linker.name;changed=true}
+    }
   });
   if(changed)saveP();
 }
