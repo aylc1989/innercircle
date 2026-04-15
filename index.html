@@ -1549,6 +1549,17 @@ function renderItems(c){
     it.append(h('div',{class:'avatar',style:{background:getColor(p.name)}},initials(p.name)));
     var info=h('div',{class:'contact-info'});info.append(h('div',{class:'contact-name'},p.name));
     var sub=getSubtitle(p);if(sub)info.append(h('div',{class:'contact-sub'},sub));
+    // Show which field matched when searching (if not already visible)
+    if(S.search){var q=S.search.toLowerCase();
+      var matchField='';
+      if(!p.name.toLowerCase().includes(q)&&!(sub&&sub.toLowerCase().includes(q))){
+        if((p.address||'').toLowerCase().includes(q))matchField='Location: '+p.address;
+        else if((p.relationship||'').toLowerCase().includes(q))matchField='';
+        else if((p.interests||'').toLowerCase().includes(q))matchField='Interests: '+p.interests;
+        else if((p.notes||'').toLowerCase().includes(q)){var ni=p.notes.toLowerCase().indexOf(q);var snippet=p.notes.substring(Math.max(0,ni-15),Math.min(p.notes.length,ni+q.length+30));matchField='Notes: \u2026'+snippet+'\u2026'}
+      }
+      if(matchField)info.append(h('div',{class:'contact-sub',style:{color:'var(--accent)',fontSize:'11px'}},matchField));
+    }
     if(p.relationship)info.append(h('div',{class:'relationship-tag'},p.relationship));
     it.append(info,h('div',{class:'contact-badge'},timeAgo(p.createdAt)));list.append(it)});
   c.append(list);
