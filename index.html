@@ -962,7 +962,17 @@ function getUpcomingBirthdays(days){
 }
 
 let S={profiles:[],logs:[],view:'list',activeId:null,search:'',profileTab:'details',settings:{provider:'local',apiKey:'',model:''}};
-function load(){try{S.profiles=JSON.parse(localStorage.getItem(PROFILES_KEY)||'[]')}catch{S.profiles=[]}try{S.logs=JSON.parse(localStorage.getItem(LOGS_KEY)||'[]')}catch{S.logs=[]}try{Object.assign(S.settings,JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'))}catch{}}
+function load(){try{S.profiles=JSON.parse(localStorage.getItem(PROFILES_KEY)||'[]')}catch{S.profiles=[]}try{S.logs=JSON.parse(localStorage.getItem(LOGS_KEY)||'[]')}catch{S.logs=[]}try{Object.assign(S.settings,JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'))}catch{}
+  // Backfill partner field from existing spouse/partner connections
+  var changed=false;
+  S.profiles.forEach(function(p){
+    if(p.partner)return;
+    if(!p.links)return;
+    var pl=p.links.find(function(l){return isPartnerLabel(l.label)&&S.profiles.some(function(x){return x.id===l.targetId})});
+    if(pl){p.partner=pl.targetName;changed=true}
+  });
+  if(changed)saveP();
+}
 function saveP(){localStorage.setItem(PROFILES_KEY,JSON.stringify(S.profiles))}
 function saveL(){localStorage.setItem(LOGS_KEY,JSON.stringify(S.logs))}
 function saveS(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(S.settings))}
@@ -1386,7 +1396,7 @@ function renderList(){
     mw.append(dd);setTimeout(function(){document.addEventListener('click',function c(){dd.remove();document.removeEventListener('click',c)})},10)}}));
   acts.append(mw,h('button',{class:'icon-btn primary',html:I.plus,onClick:showNewModal}));top.append(acts);hdr.append(top);
   var sw=h('div',{class:'search-wrap'});sw.innerHTML='<span class="search-icon">'+I.search+'</span>';
-  var si=h('input',{class:'search-input',placeholder:'Search your circle\u2026',value:S.search,onInput:function(e){S.search=e.target.value;renderItems(sc)}});
+  var si=h('input',{class:'search-input',placeholder:'Search name, job, company, location\u2026',value:S.search,onInput:function(e){S.search=e.target.value;renderItems(sc)}});
   sw.append(si);hdr.append(sw);app.append(hdr);
   var sc=h('div',{class:'scroll'});
   // Upcoming birthdays banner
@@ -1417,7 +1427,7 @@ function renderList(){
 
 function renderItems(c){
   c.innerHTML='';var list=h('div',{class:'contact-list'});
-  var f=S.profiles.filter(function(p){return!S.search||p.name.toLowerCase().includes(S.search.toLowerCase())||(p.job||'').toLowerCase().includes(S.search.toLowerCase())||(p.relationship||'').toLowerCase().includes(S.search.toLowerCase())}).sort(function(a,b){return a.name.localeCompare(b.name)});
+  var f=S.profiles.filter(function(p){if(!S.search)return true;var q=S.search.toLowerCase();return p.name.toLowerCase().includes(q)||(p.job||'').toLowerCase().includes(q)||(p.company||'').toLowerCase().includes(q)||(p.relationship||'').toLowerCase().includes(q)||(p.address||'').toLowerCase().includes(q)||(p.interests||'').toLowerCase().includes(q)||(p.notes||'').toLowerCase().includes(q)}).sort(function(a,b){return a.name.localeCompare(b.name)});
   if(!f.length){
     var emptyDiv=h('div',{class:'empty-state'});
     var emptyIcon=h('div',{class:'empty-icon'});
