@@ -1915,29 +1915,24 @@ async function backupToDrive(){
   var d={profiles:S.profiles,logs:S.logs,exportedAt:new Date().toISOString()};
   var json=JSON.stringify(d,null,2);
   var filename='inner-circle-'+new Date().toISOString().split('T')[0]+'.json';
-  // Try Web Share with files. Some Android Chrome versions reject
-  // application/json in canShare, so fall back to text/plain (the file
-  // contents are still JSON, the extension is preserved).
-  if(navigator.canShare){
-    var mimes=['application/json','text/plain'];
-    for(var i=0;i<mimes.length;i++){
-      var file=new File([new Blob([json],{type:mimes[i]})],filename,{type:mimes[i]});
-      if(navigator.canShare({files:[file]})){
-        try{
-          await navigator.share({files:[file],title:'Inner Circle Backup',text:'Inner Circle backup '+filename});
-          showToast('Shared');
-          return;
-        }catch(err){
-          if(err&&err.name==='AbortError'){showToast('Share cancelled');return}
-          break;
-        }
-      }
+  // text/plain is the most permissive MIME for Web Share's file validation;
+  // the .json filename and JSON contents are preserved. We skip canShare
+  // gating because some Android Chrome builds return false from canShare
+  // even when share() actually opens the system sheet.
+  var file=new File([json],filename,{type:'text/plain'});
+  if(navigator.share){
+    try{
+      await navigator.share({files:[file],title:'Inner Circle Backup'});
+      showToast('Shared');
+      return;
+    }catch(err){
+      if(err&&err.name==='AbortError'){showToast('Share cancelled');return}
+      console.warn('Web Share failed:',err);
+      // Fall through to a plain download.
     }
   }
-  // No share support at all \u2014 download and open Drive in a new tab.
   exportData();
-  window.open('https://drive.google.com/drive/my-drive','_blank');
-  showToast('File downloaded \u2014 upload to Drive');
+  showToast('Downloaded');
 }
 
 load();render();
@@ -1949,6 +1944,10 @@ if('serviceWorker' in navigator){
     window.location.reload();
   });
   navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(function(reg){
+    // If a new SW finished installing while the page was closed, it's
+    // already in 'waiting' — push it through immediately so we don't
+    // serve stale code on next launch.
+    if(reg.waiting&&navigator.serviceWorker.controller)reg.waiting.postMessage({type:'SKIP_WAITING'});
     // Check for updates every 30 minutes
     setInterval(function(){reg.update()},1800000);
     // Also check when the user returns to the app. visibilitychange covers
