@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inner-circle-v4';
+const CACHE_NAME = 'inner-circle-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -31,10 +31,11 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Network-first for HTML navigation — always get fresh content
+  // Network-first for HTML navigation — always get fresh content,
+  // bypassing the HTTP cache so a stale CDN copy can't pin an old build.
   if (e.request.mode === 'navigate' || e.request.destination === 'document') {
     e.respondWith(
-      fetch(e.request).then((response) => {
+      fetch(e.request, { cache: 'no-cache' }).then((response) => {
         if (response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
