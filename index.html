@@ -1911,7 +1911,34 @@ function renderSettings(){
 
 function exportData(){var d={profiles:S.profiles,logs:S.logs,exportedAt:new Date().toISOString()};var b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='inner-circle-'+new Date().toISOString().split('T')[0]+'.json';a.click();URL.revokeObjectURL(a.href);showToast('Exported')}
 function importData(){var i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){try{var d=JSON.parse(ev.target.result);if(d.profiles){S.profiles=d.profiles;saveP()}if(d.logs){S.logs=d.logs;saveL()}render();showToast('Imported')}catch(err){showToast('Invalid file')}};r.readAsText(f)};i.click()}
-function backupToDrive(){var d={profiles:S.profiles,logs:S.logs,exportedAt:new Date().toISOString()};var b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});var f=new File([b],'inner-circle-'+new Date().toISOString().split('T')[0]+'.json',{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],title:'Inner Circle Backup'}).then(function(){showToast('Shared')}).catch(function(){exportData()});else{exportData();window.open('https://drive.google.com/drive/my-drive','_blank');showToast('File downloaded \u2014 upload to Drive')}}
+async function backupToDrive(){
+  var d={profiles:S.profiles,logs:S.logs,exportedAt:new Date().toISOString()};
+  var json=JSON.stringify(d,null,2);
+  var filename='inner-circle-'+new Date().toISOString().split('T')[0]+'.json';
+  // Try Web Share with files. Some Android Chrome versions reject
+  // application/json in canShare, so fall back to text/plain (the file
+  // contents are still JSON, the extension is preserved).
+  if(navigator.canShare){
+    var mimes=['application/json','text/plain'];
+    for(var i=0;i<mimes.length;i++){
+      var file=new File([new Blob([json],{type:mimes[i]})],filename,{type:mimes[i]});
+      if(navigator.canShare({files:[file]})){
+        try{
+          await navigator.share({files:[file],title:'Inner Circle Backup',text:'Inner Circle backup '+filename});
+          showToast('Shared');
+          return;
+        }catch(err){
+          if(err&&err.name==='AbortError'){showToast('Share cancelled');return}
+          break;
+        }
+      }
+    }
+  }
+  // No share support at all \u2014 download and open Drive in a new tab.
+  exportData();
+  window.open('https://drive.google.com/drive/my-drive','_blank');
+  showToast('File downloaded \u2014 upload to Drive');
+}
 
 load();render();
 if('serviceWorker' in navigator){
