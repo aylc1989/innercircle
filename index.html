@@ -1587,7 +1587,7 @@ function renderList(){
   var acts=h('div',{class:'header-actions'});var mw=h('div',{style:{position:'relative'}});
   mw.append(h('button',{class:'icon-btn',html:I.menu,onClick:function(e){e.stopPropagation();var ex=$('.dropdown-menu');if(ex){ex.remove();return}
     var dd=h('div',{class:'dropdown-menu'});
-    dd.append(h('button',{class:'dropdown-item',onClick:function(){dd.remove();exportData()}},h('span',{html:I.download}),'Export'),h('button',{class:'dropdown-item',onClick:function(){dd.remove();importData()}},h('span',{html:I.upload}),'Import'),h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:function(){dd.remove();backupToDrive()}},h('span',{html:I.cloud}),'Backup to Drive'),h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:function(){dd.remove();S.view='settings';render()}},h('span',{html:I.settings}),'Settings'));
+    dd.append(h('button',{class:'dropdown-item',onClick:function(){dd.remove();exportData()}},h('span',{html:I.download}),'Export Backup'),h('button',{class:'dropdown-item',onClick:function(){dd.remove();importData()}},h('span',{html:I.upload}),'Import Backup'),h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:function(){dd.remove();importOutlookCSV()}},h('span',{html:I.upload}),'Import from Outlook'),h('button',{class:'dropdown-item',onClick:function(){dd.remove();exportOutlookCSV()}},h('span',{html:I.download}),'Export for Outlook'),h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:function(){dd.remove();backupToDrive()}},h('span',{html:I.cloud}),'Backup to Drive'),h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:function(){dd.remove();S.view='settings';render()}},h('span',{html:I.settings}),'Settings'));
     mw.append(dd);setTimeout(function(){document.addEventListener('click',function c(){dd.remove();document.removeEventListener('click',c)})},10)}}));
   acts.append(mw,h('button',{class:'icon-btn primary',html:I.plus,onClick:showNewModal}));top.append(acts);hdr.append(top);
   var sw=h('div',{class:'search-wrap'});sw.innerHTML='<span class="search-icon">'+I.search+'</span>';
@@ -1903,6 +1903,12 @@ function renderSettings(){
   dc.append(h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:importData},h('span',{html:I.upload}),'Import Backup'));
   dc.append(h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:backupToDrive},h('span',{html:I.cloud}),'Backup to Drive'));
   ds.append(dc);sc.append(ds);
+  sc.append(h('div',{class:'section-title'},'Outlook'));
+  var os=h('div',{class:'settings-section'});var oc=h('div',{class:'settings-card'});
+  oc.append(h('button',{class:'dropdown-item',onClick:importOutlookCSV},h('span',{html:I.upload}),'Import from Outlook (CSV)'));
+  oc.append(h('div',{class:'dropdown-divider'}),h('button',{class:'dropdown-item',onClick:exportOutlookCSV},h('span',{html:I.download}),'Export for Outlook (CSV)'));
+  oc.append(h('div',{class:'dropdown-divider'}),h('div',{class:'settings-row'},h('div',{class:'settings-desc'},'In Outlook.com: People \u2192 Manage \u2192 Export contacts (or Import contacts) \u2192 CSV. Classic Outlook: File \u2192 Open & Export \u2192 Import/Export.')));
+  os.append(oc);sc.append(os);
   sc.append(h('div',{class:'section-title'},'About'));
   var is2=h('div',{class:'settings-section'});var ic=h('div',{class:'settings-card'});
   ic.append(h('div',{class:'settings-row'},h('div',{class:'settings-label'},'Inner Circle'),h('div',{class:'settings-desc'},S.profiles.length+' contacts \u00B7 '+S.logs.length+' entries \u00B7 Data stored locally.')));
@@ -1933,6 +1939,251 @@ async function backupToDrive(){
   }
   exportData();
   showToast('Downloaded');
+}
+
+// === OUTLOOK CONTACTS (CSV) ===
+// Outlook.com (People > Manage > Export/Import contacts) and classic Outlook
+// both exchange contacts as CSV keyed by column name. Export writes Outlook's
+// own column names so its import wizard maps them without prompting; import
+// reads those names back plus a few common aliases from other address books.
+
+var OUTLOOK_COLS=['First Name','Middle Name','Last Name','Company','Job Title','E-mail Address','Mobile Phone','Home Phone','Business Phone','Home Street','Home City','Home State','Home Postal Code','Home Country/Region','Birthday','Notes'];
+
+// Fields Outlook has no column for get appended to Notes under this marker,
+// so an export/import round trip through Outlook stays lossless.
+var IC_NOTE_MARK='--- Inner Circle ---';
+var IC_NOTE_FIELDS=[['relationship','Relationship to me'],['partner','Their partner'],['children','Children'],['pets','Pets'],['interests','Interests']];
+
+// Aliases are checked in order; the first non-empty column wins.
+var CSV_ALIASES={
+  first:['first name','given name'],
+  middle:['middle name','additional name'],
+  last:['last name','family name','surname'],
+  display:['display name','name','full name','file as'],
+  email:['e-mail address','e-mail 1 - value','email address','email','e-mail','primary email','e-mail 2 address'],
+  phone:['mobile phone','cell phone','phone 1 - value','primary phone','business phone','home phone','mobile'],
+  company:['company','organization 1 - name','organization name','organization'],
+  job:['job title','organization 1 - title','organization title','role'],
+  birthday:['birthday','birthdate','date of birth'],
+  notes:['notes','private notes','description']
+};
+
+function csvParse(text){
+  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  var rows=[],row=[],cur='',q=false;
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(q){
+      if(c==='"'){if(text[i+1]==='"'){cur+='"';i++}else q=false}
+      else cur+=c;
+    }
+    else if(c==='"')q=true;
+    else if(c===',')  {row.push(cur);cur=''}
+    else if(c==='\r') {/* CRLF handled on the \n */}
+    else if(c==='\n') {row.push(cur);cur='';rows.push(row);row=[]}
+    else cur+=c;
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row)}
+  return rows.filter(function(r){return r.some(function(v){return v.trim()!==''})});
+}
+function csvEsc(v){v=v==null?'':String(v);return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function csvPick(row,aliases){
+  for(var i=0;i<aliases.length;i++){var v=row[aliases[i]];if(v&&v.trim())return v.trim()}
+  return '';
+}
+function splitName(n){
+  var parts=(n||'').trim().split(/\s+/).filter(Boolean);
+  if(!parts.length)return{first:'',middle:'',last:''};
+  if(parts.length===1)return{first:parts[0],middle:'',last:''};
+  return{first:parts[0],middle:parts.slice(1,-1).join(' '),last:parts[parts.length-1]};
+}
+function toOutlookDate(iso){
+  if(!iso)return '';
+  var m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m)return String(iso);
+  return Number(m[2])+'/'+Number(m[3])+'/'+m[1];
+}
+function fromOutlookDate(v){
+  if(!v)return '';
+  v=v.trim();
+  var iso=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(iso)return pad4(iso[1])+'-'+pad2(iso[2])+'-'+pad2(iso[3]);
+  var slash=v.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+  if(slash){
+    var a=Number(slash[1]),b=Number(slash[2]);
+    // Outlook writes M/D/YYYY; a leading value over 12 can only be the day.
+    var mo=a>12?b:a,dy=a>12?a:b;
+    if(mo>=1&&mo<=12&&dy>=1&&dy<=31)return slash[3]+'-'+pad2(mo)+'-'+pad2(dy);
+    return '';
+  }
+  var d=new Date(v);
+  if(!isNaN(d)&&d.getFullYear()>1900&&d.getFullYear()<2100)return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+  return '';
+}
+function pad2(n){return String(n).padStart(2,'0')}
+function pad4(n){return String(n).padStart(4,'0')}
+
+function outlookNotes(p){
+  var extra=IC_NOTE_FIELDS.filter(function(f){return p[f[0]]&&String(p[f[0]]).trim()})
+    .map(function(f){return f[1]+': '+String(p[f[0]]).trim()});
+  var base=(p.notes||'').trim();
+  if(!extra.length)return base;
+  return (base?base+'\n\n':'')+IC_NOTE_MARK+'\n'+extra.join('\n');
+}
+function parseOutlookNotes(raw){
+  var text=(raw||'').replace(/\r\n/g,'\n');
+  var out={notes:text.trim()};
+  var idx=text.indexOf(IC_NOTE_MARK);
+  if(idx===-1)return out;
+  out.notes=text.slice(0,idx).trim();
+  text.slice(idx+IC_NOTE_MARK.length).split('\n').forEach(function(line){
+    var m=line.match(/^\s*([^:]+):\s*(.+)$/);if(!m)return;
+    var label=m[1].trim().toLowerCase();
+    var f=IC_NOTE_FIELDS.find(function(x){return x[1].toLowerCase()===label});
+    if(f)out[f[0]]=m[2].trim();
+  });
+  return out;
+}
+function csvAddress(row){
+  var groups=['home','business','other'];
+  for(var g=0;g<groups.length;g++){
+    var pre=groups[g]+' ';
+    var parts=[row[pre+'street'],row[pre+'street 2'],row[pre+'city'],row[pre+'state'],row[pre+'postal code'],row[pre+'country/region']||row[pre+'country']]
+      .map(function(v){return (v||'').trim()}).filter(Boolean);
+    if(parts.length)return parts.join(', ');
+  }
+  return (row['address 1 - formatted']||'').trim().replace(/\s*\n\s*/g,', ');
+}
+
+function exportOutlookCSV(){
+  if(!S.profiles.length){showToast('No contacts to export');return}
+  var lines=[OUTLOOK_COLS.map(csvEsc).join(',')];
+  S.profiles.forEach(function(p){
+    var n=splitName(p.name);
+    var row={
+      'First Name':n.first,'Middle Name':n.middle,'Last Name':n.last,
+      'Company':p.company||'','Job Title':p.job||'',
+      'E-mail Address':p.email||'','Mobile Phone':p.phone||'','Home Phone':'','Business Phone':'',
+      'Home Street':p.address||'','Home City':'','Home State':'','Home Postal Code':'','Home Country/Region':'',
+      'Birthday':toOutlookDate(p.birthday),'Notes':outlookNotes(p)
+    };
+    lines.push(OUTLOOK_COLS.map(function(c){return csvEsc(row[c])}).join(','));
+  });
+  // Leading BOM so Outlook and Excel read the file as UTF-8.
+  var b=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='inner-circle-outlook-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();URL.revokeObjectURL(a.href);
+  showToast('Exported '+S.profiles.length+' contact'+(S.profiles.length===1?'':'s'));
+}
+
+function csvRowToContact(row){
+  var name=[csvPick(row,CSV_ALIASES.first),csvPick(row,CSV_ALIASES.middle),csvPick(row,CSV_ALIASES.last)].filter(Boolean).join(' ').trim();
+  if(!name)name=csvPick(row,CSV_ALIASES.display);
+  var email=csvPick(row,CSV_ALIASES.email);
+  if(!name&&email)name=email.split('@')[0];
+  if(!name)return null;
+  var parsed=parseOutlookNotes(csvPick(row,CSV_ALIASES.notes));
+  var c={name:name,email:email,phone:csvPick(row,CSV_ALIASES.phone),company:csvPick(row,CSV_ALIASES.company),
+    job:csvPick(row,CSV_ALIASES.job),address:csvAddress(row),birthday:fromOutlookDate(csvPick(row,CSV_ALIASES.birthday)),notes:parsed.notes};
+  IC_NOTE_FIELDS.forEach(function(f){if(parsed[f[0]])c[f[0]]=parsed[f[0]]});
+  return c;
+}
+function findExistingProfile(c){
+  var nl=c.name.toLowerCase().trim();
+  var byName=S.profiles.find(function(p){return p.name.toLowerCase().trim()===nl});
+  if(byName)return byName;
+  if(!c.email)return null;
+  var el=c.email.toLowerCase().trim();
+  return S.profiles.find(function(p){return p.email&&p.email.toLowerCase().trim()===el})||null;
+}
+
+function importOutlookCSV(){
+  var i=document.createElement('input');
+  i.type='file';i.accept='.csv,text/csv,text/comma-separated-values';
+  i.onchange=function(e){
+    var f=e.target.files[0];if(!f)return;
+    var r=new FileReader();
+    r.onload=function(ev){
+      var rows;
+      try{rows=csvParse(String(ev.target.result))}catch(err){showToast('Could not read that file');return}
+      if(rows.length<2){showToast('No contacts found in that file');return}
+      var headers=rows[0].map(function(hd){return hd.trim().toLowerCase()});
+      var seen={},contacts=[];
+      rows.slice(1).forEach(function(cells){
+        var row={};
+        headers.forEach(function(hd,idx){if(hd&&!(hd in row))row[hd]=cells[idx]||''});
+        var c=csvRowToContact(row);if(!c)return;
+        var key=c.name.toLowerCase()+'|'+(c.email||'').toLowerCase();
+        if(seen[key])return;
+        seen[key]=1;contacts.push(c);
+      });
+      if(!contacts.length){showToast('No contacts found in that file');return}
+      var fresh=[],dupes=[];
+      contacts.forEach(function(c){
+        var ex=findExistingProfile(c);
+        if(ex)dupes.push({contact:c,profile:ex});else fresh.push(c);
+      });
+      showOutlookImportModal(f.name,fresh,dupes);
+    };
+    r.readAsText(f);
+  };
+  i.click();
+}
+
+function showOutlookImportModal(filename,fresh,dupes){
+  var ov=h('div',{class:'modal-overlay',onClick:function(e){if(e.target===ov)ov.remove()}});
+  var md=h('div',{class:'modal'});
+  md.append(h('div',{class:'modal-header'},h('div',{class:'modal-title'},'Import from Outlook'),h('button',{class:'icon-btn',html:I.x,onClick:function(){ov.remove()}})));
+  md.append(h('div',{class:'settings-desc',style:{marginBottom:'16px'}},filename+' · '+(fresh.length+dupes.length)+' contact'+(fresh.length+dupes.length===1?'':'s')+' found'));
+  var card=h('div',{class:'settings-card',style:{marginBottom:'20px'}});
+  card.append(h('div',{class:'settings-row'},h('div',{class:'settings-label'},fresh.length+' new'),h('div',{class:'settings-desc'},fresh.length?'Will be added to your circle':'Nothing new in this file')));
+  if(dupes.length){
+    card.append(h('div',{class:'dropdown-divider'}));
+    card.append(h('div',{class:'settings-row'},h('div',{class:'settings-label'},dupes.length+' already in your circle'),h('div',{class:'settings-desc'},'Matched by name or email')));
+  }
+  md.append(card);
+  var fillBox=null;
+  if(dupes.length){
+    var lbl=h('label',{style:{display:'flex',alignItems:'flex-start',gap:'10px',marginBottom:'20px',cursor:'pointer'}});
+    fillBox=h('input',{type:'checkbox',style:{marginTop:'2px',accentColor:'var(--accent)',width:'16px',height:'16px',flexShrink:'0'}});
+    fillBox.checked=true;
+    var txt=h('div');
+    txt.append(h('div',{class:'settings-label'},'Fill blank fields on existing contacts'));
+    txt.append(h('div',{class:'settings-desc'},'Never overwrites anything you already wrote.'));
+    lbl.append(fillBox,txt);md.append(lbl);
+  }
+  var count=fresh.length+(dupes.length?dupes.length:0);
+  var btn=h('button',{class:'icon-btn accent wide',style:{width:'100%',height:'48px',borderRadius:'var(--radius)'},onClick:function(){
+    ov.remove();applyOutlookImport(fresh,dupes,fillBox?fillBox.checked:false);
+  }},count?'Import '+count+' contact'+(count===1?'':'s'):'Nothing to import');
+  if(!count)btn.disabled=true;
+  md.append(btn);
+  ov.append(md);document.body.append(ov);
+}
+
+function applyOutlookImport(fresh,dupes,fillExisting){
+  var keys=FIELD_DEFS.map(function(f){return f.key});
+  var added=0,updated=0;
+  fresh.forEach(function(c){
+    var p={id:uid(),name:c.name,createdAt:new Date().toISOString(),summary:'',links:[]};
+    keys.forEach(function(k){if(c[k]&&String(c[k]).trim())p[k]=String(c[k]).trim()});
+    S.profiles.push(p);addLog(p.id,'Imported from Outlook');rebuildSummary(p);added++;
+  });
+  if(fillExisting)dupes.forEach(function(d){
+    var changed=[];
+    keys.forEach(function(k){
+      var incoming=d.contact[k];
+      if(!incoming||!String(incoming).trim())return;
+      if(d.profile[k]&&String(d.profile[k]).trim())return;
+      d.profile[k]=String(incoming).trim();changed.push(k);
+    });
+    if(changed.length){addLog(d.profile.id,'Updated from Outlook import ('+changed.join(', ')+')');rebuildSummary(d.profile);updated++}
+  });
+  saveP();render();
+  var msg=added?'Added '+added+' contact'+(added===1?'':'s'):'No new contacts';
+  if(updated)msg+=' · updated '+updated;
+  showToast(msg);
 }
 
 load();render();
