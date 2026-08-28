@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inner-circle-v5';
+const CACHE_NAME = 'inner-circle-v6';
 const ASSETS = [
   './',
   './index.html',
